@@ -83,22 +83,9 @@ MaozedongReader/
 - **真机**：在 Signing 里勾选 **Automatically manage signing**，**Bundle Identifier** 改为已存在的 ID；或暂时关掉 **Automatically manage signing**，选手动 **Provisioning Profile**（若你有）。
 - 默认占位符为 `com.example.MaozedongReader`，极易触发「新建 App ID」；真机调试时请改成你自己的、且未超限的标识符。
 
-### 手动接入到其他工程（可选）
-
-若你已有自己的 Xcode 工程，仍可将 `MaozedongReader/` 下所有 `.swift` 与 `Assets.xcassets` 拖入 target，并把入口改为 `MaozedongReaderApp.swift`。
-
-内置诗词语料为 `Resources/BundledPoetryCorpus_part*.txt`（格式见同目录 `README_CORPUS.txt`）。也可通过「导入」从本机选取其他 `txt` / `md` 文件。
-
-**版权声明**：应用内网页阅读（马克思主义文库等）仅作链接展示；打包的正文请以权利人许可为准，自行核对后再分发。
 
 ### 更新内置选集（离线数据）
 
 1. 同步 `src/*.md` 到 `MaozedongReader/BundledAnthology/`（不要放入 `目录.md`，或同步后删除之）。
 2. 将上游 `目录.md` 复制为 `MaozedongReader/Resources/AnthologyTOC.md`（供 `AnthologyTocParser` 解析）。
 3. 在 `DocumentStore.swift` 中递增 **`bundledAnthologyVersion`**，以便已安装用户下次启动时替换旧的内置选集条目。
-
-## 后续可扩展建议
-
-- 更细粒度朗读（段落朗读、语速/音色选择）
-- 云端同步（iCloud）
-- 导入 PDF / ePub（需额外解析能力）
