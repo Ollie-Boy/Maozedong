@@ -6,11 +6,19 @@ struct DocumentItem: Identifiable, Codable, Hashable {
     var content: String
     var sourceFileName: String?
     var category: DocumentCategory
+    /// Rough calendar fields for chronological sort (from corpus date line).
+    var sortEpochYear: Int?
+    var sortEpochMonth: Int?
+    var sortEpochDay: Int?
+    /// Original corpus sequence number (1…n) when from bundled poetry; tie-breaker when dates match.
+    var sortCorpusIndex: Int?
     let createdAt: Date
     var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, title, content, sourceFileName, category, createdAt, updatedAt
+        case id, title, content, sourceFileName, category
+        case sortEpochYear, sortEpochMonth, sortEpochDay, sortCorpusIndex
+        case createdAt, updatedAt
     }
 
     init(
@@ -18,7 +26,11 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         title: String,
         content: String,
         sourceFileName: String? = nil,
-        category: DocumentCategory = .article,
+        category: DocumentCategory = .anthology,
+        sortEpochYear: Int? = nil,
+        sortEpochMonth: Int? = nil,
+        sortEpochDay: Int? = nil,
+        sortCorpusIndex: Int? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -27,6 +39,10 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         self.content = content
         self.sourceFileName = sourceFileName
         self.category = category
+        self.sortEpochYear = sortEpochYear
+        self.sortEpochMonth = sortEpochMonth
+        self.sortEpochDay = sortEpochDay
+        self.sortCorpusIndex = sortCorpusIndex
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -37,7 +53,23 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         title = try c.decode(String.self, forKey: .title)
         content = try c.decode(String.self, forKey: .content)
         sourceFileName = try c.decodeIfPresent(String.self, forKey: .sourceFileName)
-        category = try c.decodeIfPresent(DocumentCategory.self, forKey: .category) ?? .article
+        sortEpochYear = try c.decodeIfPresent(Int.self, forKey: .sortEpochYear)
+        sortEpochMonth = try c.decodeIfPresent(Int.self, forKey: .sortEpochMonth)
+        sortEpochDay = try c.decodeIfPresent(Int.self, forKey: .sortEpochDay)
+        sortCorpusIndex = try c.decodeIfPresent(Int.self, forKey: .sortCorpusIndex)
+
+        if let cat = try c.decodeIfPresent(DocumentCategory.self, forKey: .category) {
+            category = cat
+        } else if let raw = try c.decodeIfPresent(String.self, forKey: .category) {
+            if raw == "quote" || raw == "article" {
+                category = .anthology
+            } else {
+                category = DocumentCategory(rawValue: raw) ?? .anthology
+            }
+        } else {
+            category = .anthology
+        }
+
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         updatedAt = try c.decode(Date.self, forKey: .updatedAt)
     }
@@ -58,6 +90,23 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         if s.contains("\n1. ") { return true }
         return false
     }
+
+    /// Fills missing sort fields for poetry loaded before date/index extraction existed.
+    mutating func backfillPoetrySortMetadataFromContentIfNeeded() {
+        guard category == .poetry else { return }
+        var body = content
+        if body.hasPrefix("# ") {
+            if let nl = body.firstIndex(of: "\n") {
+                body = String(body[body.index(after: nl)...]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        if sortEpochYear == nil {
+            let comp = PoemDateExtractor.components(from: body)
+            sortEpochYear = comp.year
+            sortEpochMonth = comp.month
+            sortEpochDay = comp.day
+        }
+    }
 }
 
 extension DocumentItem {
@@ -65,14 +114,17 @@ extension DocumentItem {
         DocumentItem(
             title: "示例：沁园春·雪",
             content: """
+            # 示例：沁园春·雪
+
+            1936年2月
+
             北国风光，千里冰封，万里雪飘。
-            望长城内外，惟余莽莽；
-            大河上下，顿失滔滔。
-            山舞银蛇，原驰蜡象，欲与天公试比高。
-            须晴日，看红装素裹，分外妖娆。
             """,
             sourceFileName: "sample.txt",
-            category: .poetry
+            category: .poetry,
+            sortEpochYear: 1936,
+            sortEpochMonth: 2,
+            sortCorpusIndex: 51
         )
     ]
 }

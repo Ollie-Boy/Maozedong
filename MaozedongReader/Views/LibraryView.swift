@@ -5,6 +5,8 @@ struct LibraryView: View {
     @State private var showImporter = false
     @State private var libraryQuery = ""
     @State private var categoryFilter: DocumentCategory?
+    @State private var poetrySectionExpanded = true
+    @State private var anthologySectionExpanded = true
 
     private var filteredDocuments: [DocumentItem] {
         let q = libraryQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -16,11 +18,8 @@ struct LibraryView: View {
         }
     }
 
-    private var groupedByCategory: [(DocumentCategory, [DocumentItem])] {
-        let items = filteredDocuments
-        return DocumentCategory.allCases.map { cat in
-            (cat, items.filter { $0.category == cat })
-        }.filter { !$0.1.isEmpty }
+    private func sortedInCategory(_ cat: DocumentCategory) -> [DocumentItem] {
+        filteredDocuments.filter { $0.category == cat }.sorted(by: DocumentItem.displaySort)
     }
 
     var body: some View {
@@ -41,17 +40,22 @@ struct LibraryView: View {
                 } else {
                     List {
                         if categoryFilter == nil {
-                            ForEach(groupedByCategory, id: \.0) { section in
-                                Section {
-                                    ForEach(section.1) { doc in
-                                        documentRow(doc)
-                                    }
-                                } header: {
-                                    Label(section.0.displayName, systemImage: section.0.systemImage)
-                                }
+                            CollapsibleLibrarySection(
+                                category: .poetry,
+                                isExpanded: $poetrySectionExpanded,
+                                items: sortedInCategory(.poetry)
+                            ) { doc in
+                                documentRow(doc)
+                            }
+                            CollapsibleLibrarySection(
+                                category: .anthology,
+                                isExpanded: $anthologySectionExpanded,
+                                items: sortedInCategory(.anthology)
+                            ) { doc in
+                                documentRow(doc)
                             }
                         } else {
-                            ForEach(filteredDocuments) { doc in
+                            ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
                                 documentRow(doc)
                             }
                         }
@@ -112,28 +116,19 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func documentRow(_ doc: DocumentItem) -> some View {
-        NavigationLink {
-            ReaderView(document: doc)
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(doc.title)
-                    .font(.headline)
-                HStack(spacing: 8) {
-                    Label(doc.category.displayName, systemImage: doc.category.systemImage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if let progress = store.progressUTF16Offset(for: doc.id), progress > 0 {
-                        Text("已读")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.accentColor.opacity(0.15))
-                            .clipShape(Capsule())
-                    }
+        Group {
+            if doc.category == .poetry {
+                NavigationLink {
+                    PoetryReaderPager(allDocuments: store.documents, initial: doc)
+                } label: {
+                    rowLabel(doc)
                 }
-                Text(doc.sourceFileName == nil ? "内置文档" : "导入：\(doc.sourceFileName ?? "")")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            } else {
+                NavigationLink {
+                    ReaderView(document: doc)
+                } label: {
+                    rowLabel(doc)
+                }
             }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -156,6 +151,65 @@ struct LibraryView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rowLabel(_ doc: DocumentItem) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(doc.title)
+                .font(.headline)
+            HStack(spacing: 8) {
+                if doc.category == .poetry, let y = doc.sortEpochYear {
+                    Text(String(format: "%d", y))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let progress = store.progressUTF16Offset(for: doc.id), progress > 0 {
+                    Text("已读")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+            }
+        }
+    }
+}
+
+private struct CollapsibleLibrarySection<Row: View>: View {
+    let category: DocumentCategory
+    @Binding var isExpanded: Bool
+    let items: [DocumentItem]
+    @ViewBuilder let row: (DocumentItem) -> Row
+
+    var body: some View {
+        if !items.isEmpty {
+            Section {
+                if isExpanded {
+                    ForEach(items) { doc in
+                        row(doc)
+                    }
+                }
+            } header: {
+                Button {
+                    isExpanded.toggle()
+                } label: {
+                    HStack {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Label(category.displayName, systemImage: category.systemImage)
+                        Spacer()
+                        Text("\(items.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .textCase(nil)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

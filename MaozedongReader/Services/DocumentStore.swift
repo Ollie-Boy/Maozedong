@@ -43,12 +43,41 @@ final class DocumentStore: ObservableObject {
         }
 
         loadAll()
+        normalizeDocumentsAfterLoad()
         seedIfNeeded()
         mergeBundledPoetryIfNeeded()
     }
 
-    /// Bump when corpus content or load path changes so users pick up fixes (e.g. bundle resource location).
-    private static let bundledPoetryMergeKey = "didMergeBundledPoetryCorpus_v2"
+    private static let bundledPoetryVersionKey = "bundledPoetryCorpusVersion"
+    private static let bundledPoetryVersion = "v4"
+
+    private func normalizeDocumentsAfterLoad() {
+        guard !isPreviewMode else { return }
+        var changed = false
+        for i in documents.indices {
+            var d = documents[i]
+            let y0 = d.sortEpochYear
+            let m0 = d.sortEpochMonth
+            let d0 = d.sortEpochDay
+            d.backfillPoetrySortMetadataFromContentIfNeeded()
+            if d.sortEpochYear != y0 || d.sortEpochMonth != m0 || d.sortEpochDay != d0 {
+                changed = true
+            }
+            documents[i] = d
+        }
+        let sorted = documents.sorted(by: DocumentItem.displaySort)
+        if sorted.map(\.id) != documents.map(\.id) {
+            documents = sorted
+            changed = true
+        }
+        if changed {
+            do {
+                try saveDocuments()
+            } catch {
+                errorMessage = "整理书库排序失败：\(error.localizedDescription)"
+            }
+        }
+    }
 
     /// Merges bundled poetry corpus (by title) so app updates add new works without wiping the library.
     private func mergeBundledPoetryIfNeeded() {
@@ -57,21 +86,20 @@ final class DocumentStore: ObservableObject {
         let poetryDocs = BundledPoetryImporter.loadDocuments()
         guard !poetryDocs.isEmpty else { return }
 
-        if UserDefaults.standard.bool(forKey: Self.bundledPoetryMergeKey) {
-            let existingTitles = Set(documents.map(\.title))
-            var added = false
-            for p in poetryDocs where !existingTitles.contains(p.title) {
-                documents.append(p)
-                added = true
-            }
-            if added {
-                do {
-                    try saveDocuments()
-                } catch {
-                    errorMessage = "合并内置诗词失败：\(error.localizedDescription)"
-                }
-            }
-            return
+        var changed = false
+
+        if UserDefaults.standard.string(forKey: Self.bundledPoetryVersionKey) != Self.bundledPoetryVersion {
+            documents.removeAll { $0.sourceFileName?.hasPrefix("bundled_poetry_") == true }
+            documents.append(contentsOf: poetryDocs)
+            UserDefaults.standard.set(Self.bundledPoetryVersion, forKey: Self.bundledPoetryVersionKey)
+            changed = true
+        }
+
+        var titles = Set(documents.map(\.title))
+        for p in poetryDocs where !titles.contains(p.title) {
+            documents.append(p)
+            titles.insert(p.title)
+            changed = true
         }
 
         let bundled = BundledSampleImporter.loadDocuments()
@@ -81,28 +109,16 @@ final class DocumentStore: ObservableObject {
             }
 
         if documents.isEmpty || hasSampleOnly {
-            var merged = poetryDocs
-            for s in bundled where !merged.contains(where: { $0.title == s.title }) {
-                merged.append(s)
+            for s in bundled where !titles.contains(s.title) {
+                documents.append(s)
+                titles.insert(s.title)
+                changed = true
             }
-            documents = merged.sorted { $0.title < $1.title }
-            UserDefaults.standard.set(true, forKey: Self.bundledPoetryMergeKey)
-            do {
-                try saveDocuments()
-            } catch {
-                errorMessage = "写入内置诗词失败：\(error.localizedDescription)"
-            }
-            return
+            UserDefaults.standard.set(Self.bundledPoetryVersion, forKey: Self.bundledPoetryVersionKey)
         }
 
-        let existingTitles = Set(documents.map(\.title))
-        var added = false
-        for p in poetryDocs where !existingTitles.contains(p.title) {
-            documents.append(p)
-            added = true
-        }
-        UserDefaults.standard.set(true, forKey: Self.bundledPoetryMergeKey)
-        if added {
+        if changed {
+            documents.sort(by: DocumentItem.displaySort)
             do {
                 try saveDocuments()
             } catch {
@@ -128,18 +144,20 @@ final class DocumentStore: ObservableObject {
                     fileName: url.lastPathComponent,
                     content: imported.content
                 )
-                let item = DocumentItem(
+                var item = DocumentItem(
                     title: imported.title,
                     content: imported.content,
                     sourceFileName: url.lastPathComponent,
                     category: category
                 )
-                documents.insert(item, at: 0)
+                item.backfillPoetrySortMetadataFromContentIfNeeded()
+                documents.append(item)
             } catch {
                 errorMessage = "导入 \(url.lastPathComponent) 失败：\(error.localizedDescription)"
             }
         }
 
+        documents.sort(by: DocumentItem.displaySort)
         try saveDocuments()
     }
 
@@ -176,6 +194,8 @@ final class DocumentStore: ObservableObject {
         guard let idx = documents.firstIndex(where: { $0.id == documentId }) else { return }
         documents[idx].category = category
         documents[idx].updatedAt = Date()
+        documents[idx].backfillPoetrySortMetadataFromContentIfNeeded()
+        documents.sort(by: DocumentItem.displaySort)
         do {
             try saveDocuments()
         } catch {
@@ -308,6 +328,10 @@ final class DocumentStore: ObservableObject {
         let poetry = DocumentItem(
             title: "示例：沁园春·雪",
             content: """
+            # 示例：沁园春·雪
+
+            1936年2月
+
             北国风光，千里冰封，万里雪飘。
             望长城内外，惟余莽莽；
             大河上下，顿失滔滔。
@@ -321,7 +345,9 @@ final class DocumentStore: ObservableObject {
             俱往矣，数风流人物，还看今朝。
             """,
             sourceFileName: "sample.txt",
-            category: .poetry
+            category: .poetry,
+            sortEpochYear: 1936,
+            sortEpochMonth: 2
         )
 
         let quoteMD = """
@@ -338,7 +364,7 @@ final class DocumentStore: ObservableObject {
             title: "示例：语录（Markdown）",
             content: quoteMD,
             sourceFileName: "sample-quotes.md",
-            category: .quote
+            category: .anthology
         )
 
         let articleMD = """
@@ -370,11 +396,11 @@ final class DocumentStore: ObservableObject {
             title: "示例：文章（Markdown）",
             content: articleMD,
             sourceFileName: "sample-article.md",
-            category: .article
+            category: .anthology
         )
 
         do {
-            documents = [article, quote, poetry]
+            documents = [poetry, quote, article].sorted(by: DocumentItem.displaySort)
             try saveDocuments()
         } catch {
             errorMessage = "写入示例文档失败：\(error.localizedDescription)"

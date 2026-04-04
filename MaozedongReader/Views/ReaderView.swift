@@ -19,6 +19,8 @@ struct ReaderView: View {
     @StateObject private var speechService = SpeechService()
 
     let document: DocumentItem
+    /// When embedded in `PoetryReaderPager`, the parent sets the navigation title.
+    var usesExternalNavigationTitle: Bool = false
     @State private var showingSettings = false
     @State private var showingTOC = false
     @State private var showingSearch = false
@@ -99,7 +101,7 @@ struct ReaderView: View {
                 }
             }
         }
-        .navigationTitle(document.title)
+        .navigationTitle(usesExternalNavigationTitle ? "" : document.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {

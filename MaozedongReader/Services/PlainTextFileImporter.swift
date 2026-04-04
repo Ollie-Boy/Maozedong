@@ -79,22 +79,18 @@ enum PlainTextFileImporter {
 
     static func inferredCategory(fileName: String, content: String) -> DocumentCategory {
         let lower = fileName.lowercased()
-        if lower.contains("诗") || lower.contains("词") || lower.contains("poem") {
+        if lower.contains("诗") || lower.contains("词") || lower.contains("poem") || lower.contains("沁园春") {
             return .poetry
         }
-        if lower.contains("语录") || lower.contains("quote") {
-            return .quote
+        if lower.contains("选集") || lower.contains("anthology") || lower.contains("卷") || lower.contains("毛泽东选集") {
+            return .anthology
         }
-        if lower.contains("选集") || lower.contains("anthology") {
+        if lower.contains("语录") || lower.contains("quote") {
             return .anthology
         }
         if lower.contains("文") || lower.contains("article") || lower.hasSuffix(".md") {
-            return .article
+            return .anthology
         }
-        let c = content
-        if c.count < 800, c.split(separator: "\n").count <= 12 {
-            return .quote
-        }
-        return .article
+        return .anthology
     }
 }

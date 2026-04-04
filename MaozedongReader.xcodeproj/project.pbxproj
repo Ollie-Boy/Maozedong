@@ -31,6 +31,9 @@
 		BF000000000000000000001F /* BundledPoetryCorpus_part06.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000001F /* BundledPoetryCorpus_part06.txt */; };
 		BF0000000000000000000020 /* README_CORPUS.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000020 /* README_CORPUS.txt */; };
 		BF000000000000000000000E /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000E /* LibraryView.swift */; };
+		BF0000000000000000000021 /* PoetryReaderPager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000021 /* PoetryReaderPager.swift */; };
+		BF0000000000000000000022 /* PoemDateExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000022 /* PoemDateExtractor.swift */; };
+		BF0000000000000000000023 /* DocumentItem+Sort.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000023 /* DocumentItem+Sort.swift */; };
 		BF000000000000000000000F /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000F /* ReaderView.swift */; };
 		BF0000000000000000000010 /* SettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000010 /* SettingsPanel.swift */; };
 		BF0000000000000000000011 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000011 /* AVFoundation.framework */; };
@@ -65,6 +68,9 @@
 		FR0000000000000000000001F /* BundledPoetryCorpus_part06.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = BundledPoetryCorpus_part06.txt; sourceTree = "<group>"; };
 		FR00000000000000000000020 /* README_CORPUS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = README_CORPUS.txt; sourceTree = "<group>"; };
 		FR0000000000000000000000E /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		FR00000000000000000000021 /* PoetryReaderPager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoetryReaderPager.swift; sourceTree = "<group>"; };
+		FR00000000000000000000022 /* PoemDateExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoemDateExtractor.swift; sourceTree = "<group>"; };
+		FR00000000000000000000023 /* DocumentItem+Sort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DocumentItem+Sort.swift"; sourceTree = "<group>"; };
 		FR0000000000000000000000F /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		FR00000000000000000000010 /* SettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanel.swift; sourceTree = "<group>"; };
 		FR00000000000000000000011 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
@@ -147,6 +153,7 @@
 				FR00000000000000000000002 /* BookmarkEntry.swift */,
 				FR00000000000000000000003 /* DocumentCategory.swift */,
 				FR00000000000000000000004 /* DocumentItem.swift */,
+				FR00000000000000000000023 /* DocumentItem+Sort.swift */,
 				FR00000000000000000000005 /* ReaderStateSnapshot.swift */,
 				FR00000000000000000000006 /* ReadingPreferences.swift */,
 			);
@@ -166,6 +173,7 @@
 				FR00000000000000000000017 /* BundledSampleImporter.swift */,
 				FR00000000000000000000018 /* PoetryCorpusParser.swift */,
 				FR00000000000000000000019 /* BundledPoetryImporter.swift */,
+				FR00000000000000000000022 /* PoemDateExtractor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -174,6 +182,7 @@
 			isa = PBXGroup;
 			children = (
 				FR0000000000000000000000E /* LibraryView.swift */,
+				FR00000000000000000000021 /* PoetryReaderPager.swift */,
 				FR0000000000000000000000F /* ReaderView.swift */,
 				FR00000000000000000000010 /* SettingsPanel.swift */,
 			);
@@ -276,6 +285,9 @@
 				BF0000000000000000000018 /* PoetryCorpusParser.swift in Sources */,
 				BF0000000000000000000019 /* BundledPoetryImporter.swift in Sources */,
 				BF000000000000000000000E /* LibraryView.swift in Sources */,
+				BF0000000000000000000021 /* PoetryReaderPager.swift in Sources */,
+				BF0000000000000000000022 /* PoemDateExtractor.swift in Sources */,
+				BF0000000000000000000023 /* DocumentItem+Sort.swift in Sources */,
 				BF000000000000000000000F /* ReaderView.swift in Sources */,
 				BF0000000000000000000010 /* SettingsPanel.swift in Sources */,
 			);

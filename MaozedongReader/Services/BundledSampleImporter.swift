@@ -22,12 +22,20 @@ enum BundledSampleImporter {
                     fileName: url.lastPathComponent,
                     content: imported.content
                 )
+                var sortY: Int?
+                var sortM: Int?
+                if url.lastPathComponent.contains("沁园春") {
+                    sortY = 1936
+                    sortM = 2
+                }
                 items.append(
                     DocumentItem(
                         title: imported.title,
                         content: imported.content,
                         sourceFileName: url.lastPathComponent,
-                        category: category
+                        category: category,
+                        sortEpochYear: sortY,
+                        sortEpochMonth: sortM
                     )
                 )
             } catch {
