@@ -22,9 +22,10 @@ struct ImportedTextFile {
 }
 
 private enum ImportedFileEncoding {
-    /// GB18030 via CoreFoundation (some SDKs omit `String.Encoding.gb_18030_2000`).
+    /// GB18030 via CoreFoundation (numeric code: same as `kCFStringEncodingGB_18030_2000`).
+    /// Some toolchains omit both the Swift `String.Encoding` alias and the C macro in scope.
     static var gb18030: String.Encoding? {
-        let cf = CFStringEncoding(UInt32(kCFStringEncodingGB_18030_2000))
+        let cf: CFStringEncoding = 0x0632 // GB18030-2000
         let ns = CFStringConvertEncodingToNSStringEncoding(cf)
         guard ns != UInt(bitPattern: -1) else { return nil }
         return String.Encoding(rawValue: ns)
