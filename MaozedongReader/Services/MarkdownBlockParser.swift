@@ -186,8 +186,8 @@ enum MarkdownBlockParser {
             case let .heading(_, t): nextNeedle = t
             case let .paragraph(ls): nextNeedle = ls.first ?? ""
             case let .blockquote(ls): nextNeedle = ls.first ?? ""
-            case let .bullet(is): nextNeedle = is.first ?? ""
-            case let .ordered(is): nextNeedle = is.first ?? ""
+            case let .bullet(items): nextNeedle = items.first ?? ""
+            case let .ordered(items): nextNeedle = items.first ?? ""
             case .horizontalRule: nextNeedle = "---"
             }
             if let nr = findSubstring(nextNeedle), nr.lowerBound > start {

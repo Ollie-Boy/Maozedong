@@ -2,14 +2,14 @@ import SwiftUI
 
 private struct ScrollContentMinYKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
-    static func reduce(into value: inout CGFloat, nextValue: () -> CGFloat) {
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }
 }
 
 private struct BlockFramesKey: PreferenceKey {
     static var defaultValue: [UUID: CGRect] = [:]
-    static func reduce(into value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
         value.merge(nextValue(), uniquingKeysWith: { $1 })
     }
 }
@@ -458,8 +458,8 @@ struct ReaderView: View {
         case let .heading(_, t): return String(t.prefix(48))
         case let .paragraph(ls): return String((ls.first ?? "").prefix(48))
         case let .blockquote(ls): return String((ls.first ?? "").prefix(48))
-        case let .bullet(is): return String((is.first ?? "").prefix(48))
-        case let .ordered(is): return String((is.first ?? "").prefix(48))
+        case let .bullet(items): return String((items.first ?? "").prefix(48))
+        case let .ordered(items): return String((items.first ?? "").prefix(48))
         case .horizontalRule: return "分隔线"
         }
     }
