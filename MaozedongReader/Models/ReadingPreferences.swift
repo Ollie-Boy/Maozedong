@@ -51,6 +51,26 @@ struct ReadingPreferences: Codable, Equatable {
     var textColor: Color {
         theme.textColor
     }
+
+    var secondaryTextColor: Color {
+        switch theme {
+        case .light, .sepia:
+            return Color(white: 0.45)
+        case .dark:
+            return Color(white: 0.65)
+        }
+    }
+
+    var accentQuoteColor: Color {
+        switch theme {
+        case .light:
+            return Color(red: 0.2, green: 0.45, blue: 0.75)
+        case .dark:
+            return Color(red: 0.45, green: 0.7, blue: 1.0)
+        case .sepia:
+            return Color(red: 0.55, green: 0.35, blue: 0.15)
+        }
+    }
 }
 
 extension ReadingPreferences {

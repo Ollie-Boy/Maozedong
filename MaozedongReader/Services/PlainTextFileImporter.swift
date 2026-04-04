@@ -59,4 +59,22 @@ enum PlainTextFileImporter {
     static func read(from url: URL) throws -> String {
         try parse(url: url).content
     }
+
+    static func inferredCategory(fileName: String, content: String) -> DocumentCategory {
+        let lower = fileName.lowercased()
+        if lower.contains("诗") || lower.contains("词") || lower.contains("poem") {
+            return .poetry
+        }
+        if lower.contains("语录") || lower.contains("quote") {
+            return .quote
+        }
+        if lower.contains("文") || lower.contains("article") || lower.hasSuffix(".md") {
+            return .article
+        }
+        let c = content
+        if c.count < 800, c.split(separator: "\n").count <= 12 {
+            return .quote
+        }
+        return .article
+    }
 }

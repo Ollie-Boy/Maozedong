@@ -8,11 +8,13 @@ final class DocumentStore: ObservableObject {
             saveReadingPreferences()
         }
     }
+    @Published private(set) var readerState: ReaderStateSnapshot = .empty
     @Published var errorMessage: String?
 
     private let fileManager = FileManager.default
     private let documentsMetadataFileName = "documents.json"
     private let readingPreferencesFileName = "reading_preferences.json"
+    private let readerStateFileName = "reader_state.json"
     private let isPreviewMode: Bool
 
     private var documentsDirectory: URL {
@@ -27,11 +29,16 @@ final class DocumentStore: ObservableObject {
         documentsDirectory.appendingPathComponent(readingPreferencesFileName)
     }
 
+    private var readerStateURL: URL {
+        documentsDirectory.appendingPathComponent(readerStateFileName)
+    }
+
     init(previewMode: Bool = false) {
         self.isPreviewMode = previewMode
         guard !previewMode else {
             documents = DocumentItem.previewItems
             readingPreferences = .default
+            readerState = .empty
             return
         }
 
@@ -52,10 +59,15 @@ final class DocumentStore: ObservableObject {
 
             do {
                 let imported = try PlainTextFileImporter.parse(url: url)
+                let category = PlainTextFileImporter.inferredCategory(
+                    fileName: url.lastPathComponent,
+                    content: imported.content
+                )
                 let item = DocumentItem(
                     title: imported.title,
                     content: imported.content,
-                    sourceFileName: url.lastPathComponent
+                    sourceFileName: url.lastPathComponent,
+                    category: category
                 )
                 documents.insert(item, at: 0)
             } catch {
@@ -67,12 +79,72 @@ final class DocumentStore: ObservableObject {
     }
 
     func deleteDocuments(at offsets: IndexSet) {
+        let removed = offsets.map { documents[$0] }
         documents.remove(atOffsets: offsets)
+        for doc in removed {
+            readerState.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
+            readerState.bookmarks.removeAll { $0.documentId == doc.id }
+        }
         do {
             try saveDocuments()
+            saveReaderState()
         } catch {
             errorMessage = "删除失败：\(error.localizedDescription)"
         }
+    }
+
+    func deleteDocument(id: UUID) {
+        guard let idx = documents.firstIndex(where: { $0.id == id }) else { return }
+        let doc = documents[idx]
+        documents.remove(at: idx)
+        readerState.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
+        readerState.bookmarks.removeAll { $0.documentId == doc.id }
+        do {
+            try saveDocuments()
+            saveReaderState()
+        } catch {
+            errorMessage = "删除失败：\(error.localizedDescription)"
+        }
+    }
+
+    func updateCategory(documentId: UUID, category: DocumentCategory) {
+        guard let idx = documents.firstIndex(where: { $0.id == documentId }) else { return }
+        documents[idx].category = category
+        documents[idx].updatedAt = Date()
+        do {
+            try saveDocuments()
+        } catch {
+            errorMessage = "保存分类失败：\(error.localizedDescription)"
+        }
+    }
+
+    func setReadingProgress(documentId: UUID, utf16Offset: Int) {
+        guard !isPreviewMode else { return }
+        readerState.progressUTF16ByDocumentId[documentId] = max(0, utf16Offset)
+        saveReaderState()
+    }
+
+    func progressUTF16Offset(for documentId: UUID) -> Int? {
+        readerState.progressUTF16ByDocumentId[documentId]
+    }
+
+    func addBookmark(documentId: UUID, utf16Offset: Int, label: String) {
+        guard !isPreviewMode else { return }
+        let entry = BookmarkEntry(documentId: documentId, utf16Offset: max(0, utf16Offset), label: label)
+        readerState.bookmarks.insert(entry, at: 0)
+        saveReaderState()
+    }
+
+    func removeBookmarks(ids: [UUID]) {
+        guard !isPreviewMode else { return }
+        let idSet = Set(ids)
+        readerState.bookmarks.removeAll { idSet.contains($0.id) }
+        saveReaderState()
+    }
+
+    func bookmarks(for documentId: UUID) -> [BookmarkEntry] {
+        readerState.bookmarks.filter { $0.documentId == documentId }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     private func saveReadingPreferences() {
@@ -86,6 +158,16 @@ final class DocumentStore: ObservableObject {
         }
     }
 
+    private func saveReaderState() {
+        guard !isPreviewMode else { return }
+        do {
+            let data = try JSONEncoder().encode(readerState)
+            try data.write(to: readerStateURL, options: .atomic)
+        } catch {
+            errorMessage = "保存阅读进度失败：\(error.localizedDescription)"
+        }
+    }
+
     func clearError() {
         errorMessage = nil
     }
@@ -93,6 +175,7 @@ final class DocumentStore: ObservableObject {
     private func loadAll() {
         loadDocuments()
         loadReadingPreferences()
+        loadReaderState()
     }
 
     private func loadDocuments() {
@@ -123,6 +206,20 @@ final class DocumentStore: ObservableObject {
         }
     }
 
+    private func loadReaderState() {
+        guard fileManager.fileExists(atPath: readerStateURL.path) else {
+            readerState = .empty
+            return
+        }
+        do {
+            let data = try Data(contentsOf: readerStateURL)
+            readerState = try JSONDecoder().decode(ReaderStateSnapshot.self, from: data)
+        } catch {
+            readerState = .empty
+            errorMessage = "读取阅读进度失败：\(error.localizedDescription)"
+        }
+    }
+
     private func saveDocuments() throws {
         let data = try JSONEncoder().encode(documents)
         try data.write(to: documentsMetadataURL, options: .atomic)
@@ -132,28 +229,76 @@ final class DocumentStore: ObservableObject {
         guard !isPreviewMode else { return }
         guard documents.isEmpty else { return }
 
-        let sampleTitle = "示例：沁园春·雪"
-        let sampleContent = """
-        北国风光，千里冰封，万里雪飘。
-        望长城内外，惟余莽莽；
-        大河上下，顿失滔滔。
-        山舞银蛇，原驰蜡象，欲与天公试比高。
-        须晴日，看红装素裹，分外妖娆。
+        let poetry = DocumentItem(
+            title: "示例：沁园春·雪",
+            content: """
+            北国风光，千里冰封，万里雪飘。
+            望长城内外，惟余莽莽；
+            大河上下，顿失滔滔。
+            山舞银蛇，原驰蜡象，欲与天公试比高。
+            须晴日，看红装素裹，分外妖娆。
 
-        江山如此多娇，引无数英雄竞折腰。
-        惜秦皇汉武，略输文采；
-        唐宗宋祖，稍逊风骚。
-        一代天骄，成吉思汗，只识弯弓射大雕。
-        俱往矣，数风流人物，还看今朝。
+            江山如此多娇，引无数英雄竞折腰。
+            惜秦皇汉武，略输文采；
+            唐宗宋祖，稍逊风骚。
+            一代天骄，成吉思汗，只识弯弓射大雕。
+            俱往矣，数风流人物，还看今朝。
+            """,
+            sourceFileName: "sample.txt",
+            category: .poetry
+        )
+
+        let quoteMD = """
+        # 语录摘录
+
+        > 没有调查，没有发言权。
+
+        > 星星之火，可以燎原。
+
+        以上条目可作为**语录**类文档的排版示例；行内强调可用 `**粗体**` 与 `` `代码` ``。
         """
 
+        let quote = DocumentItem(
+            title: "示例：语录（Markdown）",
+            content: quoteMD,
+            sourceFileName: "sample-quotes.md",
+            category: .quote
+        )
+
+        let articleMD = """
+        # 文章结构示例
+
+        这是一篇演示 **Markdown** 渲染与目录的短文。
+
+        ## 列表与要点
+
+        - 无序列表第一项
+        - 第二项，可含 `行内代码`
+
+        1. 有序列表一
+        2. 有序列表二
+
+        ## 引用
+
+        > 引用块用于摘录或强调整段文字。
+        > 可以多行连续书写。
+
+        ---
+
+        ### 小结
+
+        从右上角可打开**目录**、**搜索**与**书签**。导入 `SampleContent` 目录下的 `.md` 可体验完整排版。
+        """
+
+        let article = DocumentItem(
+            title: "示例：文章（Markdown）",
+            content: articleMD,
+            sourceFileName: "sample-article.md",
+            category: .article
+        )
+
         do {
-            let sample = DocumentItem(
-                title: sampleTitle,
-                content: sampleContent,
-                sourceFileName: "sample.txt"
-            )
-            documents = [sample]
+            documents = [article, quote, poetry]
             try saveDocuments()
         } catch {
             errorMessage = "写入示例文档失败：\(error.localizedDescription)"
