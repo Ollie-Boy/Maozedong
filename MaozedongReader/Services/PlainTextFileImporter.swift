@@ -1,3 +1,4 @@
+import CoreFoundation
 import Foundation
 import UniformTypeIdentifiers
 
@@ -20,6 +21,29 @@ struct ImportedTextFile {
     let content: String
 }
 
+private enum ImportedFileEncoding {
+    /// GB18030 via CoreFoundation (some SDKs omit `String.Encoding.gb_18030_2000`).
+    static var gb18030: String.Encoding? {
+        let cf = CFStringEncoding(UInt32(kCFStringEncodingGB_18030_2000))
+        let ns = CFStringConvertEncodingToNSStringEncoding(cf)
+        guard ns != UInt(bitPattern: -1) else { return nil }
+        return String.Encoding(rawValue: ns)
+    }
+
+    static var decodeCandidates: [String.Encoding] {
+        var encodings: [String.Encoding] = [
+            .utf8,
+            .unicode,
+            .utf16LittleEndian,
+            .utf16BigEndian
+        ]
+        if let gb = gb18030 {
+            encodings.append(gb)
+        }
+        return encodings
+    }
+}
+
 enum PlainTextFileImporter {
     static var supportedContentTypes: [UTType] {
         var types: [UTType] = [.plainText, .text]
@@ -33,15 +57,7 @@ enum PlainTextFileImporter {
         let fileName = url.deletingPathExtension().lastPathComponent
         let data = try Data(contentsOf: url)
 
-        let encodings: [String.Encoding] = [
-            .utf8,
-            .unicode,
-            .utf16LittleEndian,
-            .utf16BigEndian,
-            .gb_18030_2000
-        ]
-
-        let text = encodings.compactMap { encoding in
+        let text = ImportedFileEncoding.decodeCandidates.compactMap { encoding in
             String(data: data, encoding: encoding)
         }.first?.replacingOccurrences(of: "\r\n", with: "\n")
           .replacingOccurrences(of: "\r", with: "\n")
