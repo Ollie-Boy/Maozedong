@@ -70,8 +70,15 @@ MaozedongReader/
 ## 如何在 Xcode 运行（推荐）
 
 1. 双击打开仓库根目录的 **`MaozedongReader.xcodeproj`**。
-2. 在 Xcode 左侧选中 **MaozedongReader** target → **Signing & Capabilities**，将 **Team** 设为你的 Apple ID 团队（真机调试必需；模拟器通常也可直接运行）。
-3. 顶部选择 **iPhone 模拟器**（或已连接的真机），按 **⌘R** 运行；断点与控制台调试与常规 iOS 工程相同。
+2. **模拟器**：工程已对 `iphonesimulator` 使用 **不签名**（`CODE_SIGN_IDENTITY = -`），一般 **无需 Team**、也不会向 Apple 申请新 App ID，直接选模拟器 **⌘R** 即可。
+3. **真机**：在 target → **Signing & Capabilities** 选择 **Team**。若提示 **App ID 数量已达 7 天上限**，不要新建 Bundle ID：把 **Bundle Identifier** 改成你账号里**已有**的任意 App ID（或等配额恢复后再用自动管理签名）。
+4. 顶部选择 **iPhone 模拟器** 或真机，按 **⌘R** 运行；断点与控制台调试与常规 iOS 工程相同。
+
+### 若仍出现 “Communication with Apple failed” / “No profiles …”
+
+- **优先用模拟器**跑通工程（不占用 App ID 配额）。
+- **真机**：在 Signing 里勾选 **Automatically manage signing**，**Bundle Identifier** 改为已存在的 ID；或暂时关掉 **Automatically manage signing**，选手动 **Provisioning Profile**（若你有）。
+- 默认占位符为 `com.example.MaozedongReader`，极易触发「新建 App ID」；真机调试时请改成你自己的、且未超限的标识符。
 
 ### 手动接入到其他工程（可选）
 
