@@ -10,7 +10,6 @@ final class DocumentStore: ObservableObject {
     }
     @Published private(set) var readerState: ReaderStateSnapshot = .empty
     @Published var errorMessage: String?
-    @Published private(set) var isSyncingRemoteAnthology = false
 
     private let fileManager = FileManager.default
     private let documentsMetadataFileName = "documents.json"
@@ -47,47 +46,44 @@ final class DocumentStore: ObservableObject {
         normalizeDocumentsAfterLoad()
         seedIfNeeded()
         mergeBundledPoetryIfNeeded()
-        Task { @MainActor in
-            await self.syncRemoteAnthologyIfNeeded()
-        }
+        mergeBundledAnthologyIfNeeded()
     }
 
-    /// Bumps when the upstream repo path or parsing changes; triggers re-download of GitHub anthology.
-    private static let remoteAnthologyBundleVersion = "weiyinfu-src-v1"
-    private static let remoteAnthologySyncedVersionKey = "remoteAnthologySyncedBundleVersion"
+    private static let bundledAnthologyVersionKey = "bundledAnthologyCorpusVersion"
+    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v1"
 
-    func syncRemoteAnthologyFromGitHub() async {
-        await syncRemoteAnthology(force: true)
-    }
-
-    private func syncRemoteAnthologyIfNeeded() async {
-        let key = Self.remoteAnthologySyncedVersionKey
-        guard UserDefaults.standard.string(forKey: key) != Self.remoteAnthologyBundleVersion else { return }
-        await syncRemoteAnthology(force: false)
-    }
-
-    private func syncRemoteAnthology(force: Bool) async {
+    private func mergeBundledAnthologyIfNeeded() {
         guard !isPreviewMode else { return }
-        isSyncingRemoteAnthology = true
-        defer { isSyncingRemoteAnthology = false }
 
-        do {
-            let fetched = try await RemoteAnthologySync.fetchDocuments()
-            guard !fetched.isEmpty else {
-                if force {
-                    errorMessage = "选集同步失败：未获取到任何文章（请检查网络）"
-                }
-                return
-            }
+        let anthologyDocs = BundledAnthologyImporter.loadDocuments()
+        guard !anthologyDocs.isEmpty else { return }
 
-            documents.removeAll { $0.sourceFileName?.hasPrefix(RemoteAnthologySync.sourcePrefix) == true }
-            documents.append(contentsOf: fetched)
+        if UserDefaults.standard.string(forKey: Self.bundledAnthologyVersionKey) != Self.bundledAnthologyVersion {
+            documents.removeAll { $0.sourceFileName?.hasPrefix(BundledAnthologyImporter.sourcePrefix) == true }
+            documents.removeAll { $0.sourceFileName?.hasPrefix("remoteAnthology:") == true }
+            documents.append(contentsOf: anthologyDocs)
             documents.sort(by: DocumentItem.displaySort)
-            UserDefaults.standard.set(Self.remoteAnthologyBundleVersion, forKey: Self.remoteAnthologySyncedVersionKey)
-            try saveDocuments()
-        } catch {
-            if force {
-                errorMessage = "选集同步失败：\(error.localizedDescription)"
+            UserDefaults.standard.set(Self.bundledAnthologyVersion, forKey: Self.bundledAnthologyVersionKey)
+            do {
+                try saveDocuments()
+            } catch {
+                errorMessage = "写入内置选集失败：\(error.localizedDescription)"
+            }
+            return
+        }
+
+        let titles = Set(documents.map(\.title))
+        var added = false
+        for a in anthologyDocs where !titles.contains(a.title) {
+            documents.append(a)
+            added = true
+        }
+        if added {
+            documents.sort(by: DocumentItem.displaySort)
+            do {
+                try saveDocuments()
+            } catch {
+                errorMessage = "合并内置选集失败：\(error.localizedDescription)"
             }
         }
     }

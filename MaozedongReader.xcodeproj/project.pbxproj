@@ -33,7 +33,8 @@
 		BF000000000000000000000E /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000E /* LibraryView.swift */; };
 		BF0000000000000000000021 /* PoetryReaderPager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000021 /* PoetryReaderPager.swift */; };
 		BF0000000000000000000024 /* AnthologyReaderPager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000024 /* AnthologyReaderPager.swift */; };
-		BF0000000000000000000025 /* RemoteAnthologySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000025 /* RemoteAnthologySync.swift */; };
+		BF0000000000000000000026 /* BundledAnthology in Resources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000026 /* BundledAnthology */; };
+		BF0000000000000000000027 /* BundledAnthologyImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000027 /* BundledAnthologyImporter.swift */; };
 		BF0000000000000000000022 /* PoemDateExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000022 /* PoemDateExtractor.swift */; };
 		BF0000000000000000000023 /* DocumentItem+Sort.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000023 /* DocumentItem+Sort.swift */; };
 		BF000000000000000000000F /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000F /* ReaderView.swift */; };
@@ -72,7 +73,8 @@
 		FR0000000000000000000000E /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		FR00000000000000000000021 /* PoetryReaderPager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoetryReaderPager.swift; sourceTree = "<group>"; };
 		FR00000000000000000000024 /* AnthologyReaderPager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthologyReaderPager.swift; sourceTree = "<group>"; };
-		FR00000000000000000000025 /* RemoteAnthologySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteAnthologySync.swift; sourceTree = "<group>"; };
+		FR00000000000000000000026 /* BundledAnthology */ = {isa = PBXFileReference; lastKnownFileType = folder; path = BundledAnthology; sourceTree = "<group>"; };
+		FR00000000000000000000027 /* BundledAnthologyImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledAnthologyImporter.swift; sourceTree = "<group>"; };
 		FR00000000000000000000022 /* PoemDateExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoemDateExtractor.swift; sourceTree = "<group>"; };
 		FR00000000000000000000023 /* DocumentItem+Sort.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DocumentItem+Sort.swift"; sourceTree = "<group>"; };
 		FR0000000000000000000000F /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 				GR00000000000000000000005 /* Services */,
 				GR00000000000000000000006 /* Views */,
 				GR00000000000000000000008 /* Resources */,
+				FR00000000000000000000026 /* BundledAnthology */,
 				GR00000000000000000000007 /* SampleContent */,
 			);
 			path = MaozedongReader;
@@ -178,7 +181,7 @@
 				FR00000000000000000000018 /* PoetryCorpusParser.swift */,
 				FR00000000000000000000019 /* BundledPoetryImporter.swift */,
 				FR00000000000000000000022 /* PoemDateExtractor.swift */,
-				FR00000000000000000000025 /* RemoteAnthologySync.swift */,
+				FR00000000000000000000027 /* BundledAnthologyImporter.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -264,6 +267,7 @@
 				BF000000000000000000001E /* BundledPoetryCorpus_part05.txt in Resources */,
 				BF000000000000000000001F /* BundledPoetryCorpus_part06.txt in Resources */,
 				BF0000000000000000000020 /* README_CORPUS.txt in Resources */,
+				BF0000000000000000000026 /* BundledAnthology in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,7 +297,7 @@
 				BF000000000000000000000E /* LibraryView.swift in Sources */,
 				BF0000000000000000000021 /* PoetryReaderPager.swift in Sources */,
 				BF0000000000000000000024 /* AnthologyReaderPager.swift in Sources */,
-				BF0000000000000000000025 /* RemoteAnthologySync.swift in Sources */,
+				BF0000000000000000000027 /* BundledAnthologyImporter.swift in Sources */,
 				BF0000000000000000000022 /* PoemDateExtractor.swift in Sources */,
 				BF0000000000000000000023 /* DocumentItem+Sort.swift in Sources */,
 				BF000000000000000000000F /* ReaderView.swift in Sources */,

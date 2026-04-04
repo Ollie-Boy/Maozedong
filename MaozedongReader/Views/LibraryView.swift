@@ -86,21 +86,6 @@ struct LibraryView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task {
-                            await store.syncRemoteAnthologyFromGitHub()
-                        }
-                    } label: {
-                        if store.isSyncingRemoteAnthology {
-                            ProgressView()
-                        } else {
-                            Label("同步选集", systemImage: "arrow.down.circle")
-                        }
-                    }
-                    .disabled(store.isSyncingRemoteAnthology)
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
                     Button("导入") {
                         showImporter = true
                     }

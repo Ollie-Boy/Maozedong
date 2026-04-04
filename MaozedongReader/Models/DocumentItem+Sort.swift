@@ -22,12 +22,8 @@ extension DocumentItem {
             if ai != bi { return ai < bi }
             return a.title < b.title
         case .anthology:
-            let ar = a.sourceFileName?.hasPrefix(RemoteAnthologySync.sourcePrefix) == true
-            let br = b.sourceFileName?.hasPrefix(RemoteAnthologySync.sourcePrefix) == true
-            if ar, br {
-                let ai = a.sortCorpusIndex ?? 99_999
-                let bi = b.sortCorpusIndex ?? 99_999
-                if ai != bi { return ai < bi }
+            if let ai = a.sortCorpusIndex, let bi = b.sortCorpusIndex, ai != bi {
+                return ai < bi
             }
             return a.title.localizedStandardCompare(b.title) == .orderedAscending
         }
