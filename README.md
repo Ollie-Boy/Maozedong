@@ -14,6 +14,7 @@
 
 1. **书库页（Library）**
    - 分组：**诗词**、**选集**（可折叠；诗词按年代排序，列表旁显示年份）
+   - **选集**：首次启动会自动从 GitHub 仓库 [weiyinfu/MaoZeDongAnthology](https://github.com/weiyinfu/MaoZeDongAnthology) 的 **`master` 分支 `src/`** 拉取全部 `.md`（与 README 目录一致）；工具栏 **「同步选集」** 可强制重新下载。选集篇目按文件名三位序号排序，阅读时 **左右滑动** 切换相邻篇
    - 进入 **诗词** 后支持 **左右滑动** 切换相邻篇目（时间顺序）
    - 内置 **毛泽东诗词** 全文（**131 篇**，含「正文 / 分隔线 / 注释」排版），资源为 `Resources/BundledPoetryCorpus_part*.txt`；升级时若内置语料版本变化会替换旧的内置诗词条目
    - 顶部 **搜索**：在标题与正文中全文检索
@@ -93,10 +94,10 @@ MaozedongReader/
 
 **版权声明**：应用内网页阅读（马克思主义文库等）仅作链接展示；打包的正文请以权利人许可为准，自行核对后再分发。
 
-### 选集与 GitHub 上的分卷 md
+### 选集数据源
 
-- **仅本机「导入」**：把各卷 md 用 App 内导入即可，**不必**提供仓库链接。
-- **希望 App 自动从 GitHub 拉取 / 按卷更新**：需要你把 **仓库 URL**（及可选：目录结构说明、分支名）发给我，才能接 API 或写同步逻辑。
+- 已内置对接 **`https://github.com/weiyinfu/MaoZeDongAnthology`** 的 `src/*.md`（需网络权限）。
+- 若上游更换仓库或分支，修改 `RemoteAnthologySync.swift` 中的 `owner` / `repo` / `branch` / `srcPath`，并递增 `DocumentStore.remoteAnthologyBundleVersion` 以触发用户端重新同步。
 
 ## 后续可扩展建议
 

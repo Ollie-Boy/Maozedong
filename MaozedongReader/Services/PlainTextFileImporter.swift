@@ -21,7 +21,7 @@ struct ImportedTextFile {
     let content: String
 }
 
-private enum ImportedFileEncoding {
+enum ImportedFileEncoding {
     /// GB18030 via CoreFoundation (numeric code: same as `kCFStringEncodingGB_18030_2000`).
     /// Some toolchains omit both the Swift `String.Encoding` alias and the C macro in scope.
     static var gb18030: String.Encoding? {
