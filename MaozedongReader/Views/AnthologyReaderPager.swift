@@ -7,8 +7,9 @@ struct AnthologyReaderPager: View {
     @State private var selectionId: UUID
 
     init(allDocuments: [DocumentItem], initial: DocumentItem) {
+        let key = initial.anthologyScrollGroupKey
         ordered = allDocuments
-            .filter { $0.category == .anthology }
+            .filter { $0.category == .anthology && $0.anthologyScrollGroupKey == key }
             .sorted(by: DocumentItem.displaySort)
         _selectionId = State(initialValue: initial.id)
     }

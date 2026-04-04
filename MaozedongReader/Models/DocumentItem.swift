@@ -12,12 +12,17 @@ struct DocumentItem: Identifiable, Codable, Hashable {
     var sortEpochDay: Int?
     /// Original corpus sequence number (1…n) when from bundled poetry; tie-breaker when dates match.
     var sortCorpusIndex: Int?
+    /// 《毛泽东选集》式分卷/分期标题（来自 `AnthologyTOC.md`）。
+    var anthologySectionTitle: String?
+    var anthologyMajorOrder: Int?
+    var anthologySubOrder: Int?
     let createdAt: Date
     var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
         case id, title, content, sourceFileName, category
         case sortEpochYear, sortEpochMonth, sortEpochDay, sortCorpusIndex
+        case anthologySectionTitle, anthologyMajorOrder, anthologySubOrder
         case createdAt, updatedAt
     }
 
@@ -31,6 +36,9 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         sortEpochMonth: Int? = nil,
         sortEpochDay: Int? = nil,
         sortCorpusIndex: Int? = nil,
+        anthologySectionTitle: String? = nil,
+        anthologyMajorOrder: Int? = nil,
+        anthologySubOrder: Int? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -43,6 +51,9 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         self.sortEpochMonth = sortEpochMonth
         self.sortEpochDay = sortEpochDay
         self.sortCorpusIndex = sortCorpusIndex
+        self.anthologySectionTitle = anthologySectionTitle
+        self.anthologyMajorOrder = anthologyMajorOrder
+        self.anthologySubOrder = anthologySubOrder
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -57,6 +68,9 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         sortEpochMonth = try c.decodeIfPresent(Int.self, forKey: .sortEpochMonth)
         sortEpochDay = try c.decodeIfPresent(Int.self, forKey: .sortEpochDay)
         sortCorpusIndex = try c.decodeIfPresent(Int.self, forKey: .sortCorpusIndex)
+        anthologySectionTitle = try c.decodeIfPresent(String.self, forKey: .anthologySectionTitle)
+        anthologyMajorOrder = try c.decodeIfPresent(Int.self, forKey: .anthologyMajorOrder)
+        anthologySubOrder = try c.decodeIfPresent(Int.self, forKey: .anthologySubOrder)
 
         if let cat = try c.decodeIfPresent(DocumentCategory.self, forKey: .category) {
             category = cat
@@ -72,6 +86,16 @@ struct DocumentItem: Identifiable, Codable, Hashable {
 
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         updatedAt = try c.decode(Date.self, forKey: .updatedAt)
+    }
+
+    /// Pager groups bundled anthology articles by volume/period from the TOC.
+    var anthologyScrollGroupKey: String {
+        guard category == .anthology,
+              let m = anthologyMajorOrder,
+              let s = anthologySubOrder else {
+            return "anthology:\(id.uuidString)"
+        }
+        return "bundledAnthology:\(m):\(s)"
     }
 
     var contentNormalized: String {

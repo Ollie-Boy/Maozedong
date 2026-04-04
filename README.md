@@ -14,7 +14,7 @@
 
 1. **书库页（Library）**
    - 分组：**诗词**、**选集**（可折叠；诗词按年代排序，列表旁显示年份）
-   - **选集**：**完全离线**，正文来自打包进 App 的 `MaozedongReader/BundledAnthology/*.md`（内容与 [weiyinfu/MaoZeDongAnthology](https://github.com/weiyinfu/MaoZeDongAnthology) 的 `src/` 一致，按文件名 `000-标题.md` 排序）；阅读时 **左右滑动** 切换相邻篇
+   - **选集**：**完全离线**，正文在 `BundledAnthology/*.md`（不含 `目录.md`）；分卷/分期与篇目对应关系由 `Resources/AnthologyTOC.md`（自上游 `目录.md`）解析。书库内选集下再按 **卷·期** 折叠分组；**左右滑动** 仅在 **同一分组** 内切换相邻篇
    - 进入 **诗词** 后支持 **左右滑动** 切换相邻篇目（时间顺序）
    - 内置 **毛泽东诗词** 全文（**131 篇**，含「正文 / 分隔线 / 注释」排版），资源为 `Resources/BundledPoetryCorpus_part*.txt`；升级时若内置语料版本变化会替换旧的内置诗词条目
    - 顶部 **搜索**：在标题与正文中全文检索
@@ -96,8 +96,9 @@ MaozedongReader/
 
 ### 更新内置选集（离线数据）
 
-1. 从上游同步文件到 `MaozedongReader/BundledAnthology/`（覆盖 `.md` 即可）。
-2. 在 `DocumentStore.swift` 中递增 **`bundledAnthologyVersion`**（`bundledAnthologyCorpusVersion` 对应逻辑），以便已安装用户下次启动时替换旧的内置选集条目。
+1. 同步 `src/*.md` 到 `MaozedongReader/BundledAnthology/`（不要放入 `目录.md`，或同步后删除之）。
+2. 将上游 `目录.md` 复制为 `MaozedongReader/Resources/AnthologyTOC.md`（供 `AnthologyTocParser` 解析）。
+3. 在 `DocumentStore.swift` 中递增 **`bundledAnthologyVersion`**，以便已安装用户下次启动时替换旧的内置选集条目。
 
 ## 后续可扩展建议
 

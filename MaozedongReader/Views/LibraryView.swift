@@ -1,5 +1,11 @@
 import SwiftUI
 
+private struct AnthologySectionBucket: Identifiable {
+    let id: String
+    let title: String
+    let items: [DocumentItem]
+}
+
 struct LibraryView: View {
     @EnvironmentObject private var store: DocumentStore
     @State private var showImporter = false
@@ -7,6 +13,7 @@ struct LibraryView: View {
     @State private var categoryFilter: DocumentCategory?
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
+    @State private var collapsedAnthologySubsections: Set<String> = []
 
     private var filteredDocuments: [DocumentItem] {
         let q = libraryQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -20,6 +27,41 @@ struct LibraryView: View {
 
     private func sortedInCategory(_ cat: DocumentCategory) -> [DocumentItem] {
         filteredDocuments.filter { $0.category == cat }.sorted(by: DocumentItem.displaySort)
+    }
+
+    private func anthologyBuckets(from items: [DocumentItem]) -> [AnthologySectionBucket] {
+        let sorted = items.sorted(by: DocumentItem.displaySort)
+        var dict: [String: [DocumentItem]] = [:]
+        var order: [String] = []
+
+        for doc in sorted {
+            let key: String
+            if let m = doc.anthologyMajorOrder, let s = doc.anthologySubOrder {
+                key = "\(m)-\(s)"
+            } else if let t = doc.anthologySectionTitle, !t.isEmpty {
+                key = "t:\(t)"
+            } else {
+                key = "other"
+            }
+            if dict[key] == nil {
+                order.append(key)
+                dict[key] = []
+            }
+            dict[key]?.append(doc)
+        }
+
+        return order.compactMap { k in
+            guard let arr = dict[k], !arr.isEmpty else { return nil }
+            let title: String
+            if k == "other" {
+                title = "其他选集"
+            } else if let first = arr.first?.anthologySectionTitle, !first.isEmpty {
+                title = first
+            } else {
+                title = "选集"
+            }
+            return AnthologySectionBucket(id: k, title: title, items: arr)
+        }
     }
 
     var body: some View {
@@ -47,12 +89,36 @@ struct LibraryView: View {
                             ) { doc in
                                 documentRow(doc)
                             }
-                            CollapsibleLibrarySection(
-                                category: .anthology,
-                                isExpanded: $anthologySectionExpanded,
-                                items: sortedInCategory(.anthology)
-                            ) { doc in
-                                documentRow(doc)
+
+                            let anth = sortedInCategory(.anthology)
+                            if !anth.isEmpty {
+                                Section {
+                                    if anthologySectionExpanded {
+                                        ForEach(anthologyBuckets(from: anth)) { bucket in
+                                            anthologySubsection(
+                                                bucket: bucket,
+                                                isCollapsed: collapsedAnthologySubsections.contains(bucket.id)
+                                            )
+                                        }
+                                    }
+                                } header: {
+                                    Button {
+                                        anthologySectionExpanded.toggle()
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: anthologySectionExpanded ? "chevron.down" : "chevron.right")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                            Label(DocumentCategory.anthology.displayName, systemImage: DocumentCategory.anthology.systemImage)
+                                            Spacer()
+                                            Text("\(anth.count)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .textCase(nil)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         } else {
                             ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
@@ -111,6 +177,39 @@ struct LibraryView: View {
             }, message: {
                 Text(store.errorMessage ?? "")
             })
+        }
+    }
+
+    @ViewBuilder
+    private func anthologySubsection(bucket: AnthologySectionBucket, isCollapsed: Bool) -> some View {
+        Section {
+            if !isCollapsed {
+                ForEach(bucket.items) { doc in
+                    documentRow(doc)
+                }
+            }
+        } header: {
+            Button {
+                if isCollapsed {
+                    collapsedAnthologySubsections.remove(bucket.id)
+                } else {
+                    collapsedAnthologySubsections.insert(bucket.id)
+                }
+            } label: {
+                HStack {
+                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(bucket.title)
+                        .font(.subheadline.weight(.medium))
+                    Spacer()
+                    Text("\(bucket.items.count)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .textCase(nil)
+            }
+            .buttonStyle(.plain)
         }
     }
 

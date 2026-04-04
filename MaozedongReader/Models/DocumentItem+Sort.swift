@@ -22,9 +22,15 @@ extension DocumentItem {
             if ai != bi { return ai < bi }
             return a.title < b.title
         case .anthology:
-            if let ai = a.sortCorpusIndex, let bi = b.sortCorpusIndex, ai != bi {
-                return ai < bi
-            }
+            let am = a.anthologyMajorOrder ?? 99
+            let bm = b.anthologyMajorOrder ?? 99
+            if am != bm { return am < bm }
+            let asub = a.anthologySubOrder ?? 0
+            let bsub = b.anthologySubOrder ?? 0
+            if asub != bsub { return asub < bsub }
+            let ai = a.sortCorpusIndex ?? 99_999
+            let bi = b.sortCorpusIndex ?? 99_999
+            if ai != bi { return ai < bi }
             return a.title.localizedStandardCompare(b.title) == .orderedAscending
         }
     }

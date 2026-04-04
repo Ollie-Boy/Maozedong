@@ -50,7 +50,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledAnthologyVersionKey = "bundledAnthologyCorpusVersion"
-    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v1"
+    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v2-toc"
 
     private func mergeBundledAnthologyIfNeeded() {
         guard !isPreviewMode else { return }
