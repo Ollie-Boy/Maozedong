@@ -14,4 +14,4 @@ Example:
 
 The following lines are the body (date lines, poem text, 注释 blocks) until the next numbered title.
 
-If the bundled file is missing or empty, the library still works with samples and imports.
+If the bundled file is missing or empty, the library still works with bundled anthology and imports.

@@ -43,10 +43,32 @@ final class DocumentStore: ObservableObject {
         }
 
         loadAll()
+        removeLegacySampleDocumentsIfNeeded()
         normalizeDocumentsAfterLoad()
-        seedIfNeeded()
         mergeBundledPoetryIfNeeded()
         mergeBundledAnthologyIfNeeded()
+    }
+
+
+    private static let legacySampleFileNames: Set<String> = [
+        "沁园春·雪.md", "语录摘录.md", "文章示例.md",
+        "sample.txt", "sample-quotes.md", "sample-article.md"
+    ]
+
+    private func removeLegacySampleDocumentsIfNeeded() {
+        guard !isPreviewMode else { return }
+        let before = documents.count
+        documents.removeAll { doc in
+            if doc.title.hasPrefix("示例：") { return true }
+            if let n = doc.sourceFileName, Self.legacySampleFileNames.contains(n) { return true }
+            return false
+        }
+        guard documents.count != before else { return }
+        do {
+            try saveDocuments()
+        } catch {
+            errorMessage = "清理旧示例文档失败：\(error.localizedDescription)"
+        }
     }
 
     private static let bundledAnthologyVersionKey = "bundledAnthologyCorpusVersion"
@@ -140,21 +162,6 @@ final class DocumentStore: ObservableObject {
             documents.append(p)
             titles.insert(p.title)
             changed = true
-        }
-
-        let bundled = BundledSampleImporter.loadDocuments()
-        let hasSampleOnly = documents.count <= 4
-            && documents.allSatisfy { doc in
-                doc.sourceFileName?.hasSuffix(".md") == true || doc.sourceFileName == "sample.txt"
-            }
-
-        if documents.isEmpty || hasSampleOnly {
-            for s in bundled where !titles.contains(s.title) {
-                documents.append(s)
-                titles.insert(s.title)
-                changed = true
-            }
-            UserDefaults.standard.set(Self.bundledPoetryVersion, forKey: Self.bundledPoetryVersionKey)
         }
 
         if changed {
@@ -350,100 +357,4 @@ final class DocumentStore: ObservableObject {
         try data.write(to: documentsMetadataURL, options: .atomic)
     }
 
-    private func seedIfNeeded() {
-        guard !isPreviewMode else { return }
-        guard documents.isEmpty else { return }
-
-        let bundled = BundledSampleImporter.loadDocuments()
-        if !bundled.isEmpty {
-            do {
-                documents = bundled
-                try saveDocuments()
-            } catch {
-                errorMessage = "写入示例文档失败：\(error.localizedDescription)"
-            }
-            return
-        }
-
-        let poetry = DocumentItem(
-            title: "示例：沁园春·雪",
-            content: """
-            # 示例：沁园春·雪
-
-            1936年2月
-
-            北国风光，千里冰封，万里雪飘。
-            望长城内外，惟余莽莽；
-            大河上下，顿失滔滔。
-            山舞银蛇，原驰蜡象，欲与天公试比高。
-            须晴日，看红装素裹，分外妖娆。
-
-            江山如此多娇，引无数英雄竞折腰。
-            惜秦皇汉武，略输文采；
-            唐宗宋祖，稍逊风骚。
-            一代天骄，成吉思汗，只识弯弓射大雕。
-            俱往矣，数风流人物，还看今朝。
-            """,
-            sourceFileName: "sample.txt",
-            category: .poetry,
-            sortEpochYear: 1936,
-            sortEpochMonth: 2
-        )
-
-        let quoteMD = """
-        # 语录摘录
-
-        > 没有调查，没有发言权。
-
-        > 星星之火，可以燎原。
-
-        以上条目可作为**语录**类文档的排版示例；行内强调可用 `**粗体**` 与 `` `代码` ``。
-        """
-
-        let quote = DocumentItem(
-            title: "示例：语录（Markdown）",
-            content: quoteMD,
-            sourceFileName: "sample-quotes.md",
-            category: .anthology
-        )
-
-        let articleMD = """
-        # 文章结构示例
-
-        这是一篇演示 **Markdown** 渲染与目录的短文。
-
-        ## 列表与要点
-
-        - 无序列表第一项
-        - 第二项，可含 `行内代码`
-
-        1. 有序列表一
-        2. 有序列表二
-
-        ## 引用
-
-        > 引用块用于摘录或强调整段文字。
-        > 可以多行连续书写。
-
-        ---
-
-        ### 小结
-
-        从右上角可打开**目录**、**搜索**与**书签**。导入 `SampleContent` 目录下的 `.md` 可体验完整排版。
-        """
-
-        let article = DocumentItem(
-            title: "示例：文章（Markdown）",
-            content: articleMD,
-            sourceFileName: "sample-article.md",
-            category: .anthology
-        )
-
-        do {
-            documents = [poetry, quote, article].sorted(by: DocumentItem.displaySort)
-            try saveDocuments()
-        } catch {
-            errorMessage = "写入示例文档失败：\(error.localizedDescription)"
-        }
-    }
 }
