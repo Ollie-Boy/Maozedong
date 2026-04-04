@@ -44,6 +44,70 @@ final class DocumentStore: ObservableObject {
 
         loadAll()
         seedIfNeeded()
+        mergeBundledPoetryIfNeeded()
+    }
+
+    private static let bundledPoetryMergeKey = "didMergeBundledPoetryCorpus_v1"
+
+    /// Merges bundled poetry corpus (by title) so app updates add new works without wiping the library.
+    private func mergeBundledPoetryIfNeeded() {
+        guard !isPreviewMode else { return }
+
+        let poetryDocs = BundledPoetryImporter.loadDocuments()
+        guard !poetryDocs.isEmpty else { return }
+
+        if UserDefaults.standard.bool(forKey: Self.bundledPoetryMergeKey) {
+            let existingTitles = Set(documents.map(\.title))
+            var added = false
+            for p in poetryDocs where !existingTitles.contains(p.title) {
+                documents.append(p)
+                added = true
+            }
+            if added {
+                do {
+                    try saveDocuments()
+                } catch {
+                    errorMessage = "合并内置诗词失败：\(error.localizedDescription)"
+                }
+            }
+            return
+        }
+
+        let bundled = BundledSampleImporter.loadDocuments()
+        let hasSampleOnly = documents.count <= 4
+            && documents.allSatisfy { doc in
+                doc.sourceFileName?.hasSuffix(".md") == true || doc.sourceFileName == "sample.txt"
+            }
+
+        if documents.isEmpty || hasSampleOnly {
+            var merged = poetryDocs
+            for s in bundled where !merged.contains(where: { $0.title == s.title }) {
+                merged.append(s)
+            }
+            documents = merged.sorted { $0.title < $1.title }
+            UserDefaults.standard.set(true, forKey: Self.bundledPoetryMergeKey)
+            do {
+                try saveDocuments()
+            } catch {
+                errorMessage = "写入内置诗词失败：\(error.localizedDescription)"
+            }
+            return
+        }
+
+        let existingTitles = Set(documents.map(\.title))
+        var added = false
+        for p in poetryDocs where !existingTitles.contains(p.title) {
+            documents.append(p)
+            added = true
+        }
+        UserDefaults.standard.set(true, forKey: Self.bundledPoetryMergeKey)
+        if added {
+            do {
+                try saveDocuments()
+            } catch {
+                errorMessage = "合并内置诗词失败：\(error.localizedDescription)"
+            }
+        }
     }
 
     func importFiles(from urls: [URL]) throws {

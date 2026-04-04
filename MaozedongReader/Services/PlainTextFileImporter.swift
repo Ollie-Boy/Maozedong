@@ -85,6 +85,9 @@ enum PlainTextFileImporter {
         if lower.contains("语录") || lower.contains("quote") {
             return .quote
         }
+        if lower.contains("选集") || lower.contains("anthology") {
+            return .anthology
+        }
         if lower.contains("文") || lower.contains("article") || lower.hasSuffix(".md") {
             return .article
         }

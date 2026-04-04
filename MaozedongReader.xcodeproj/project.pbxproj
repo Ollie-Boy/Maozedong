@@ -21,6 +21,15 @@
 		BF000000000000000000000C /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000C /* SpeechService.swift */; };
 		BF000000000000000000000D /* StableUUID.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000D /* StableUUID.swift */; };
 		BF0000000000000000000017 /* BundledSampleImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000017 /* BundledSampleImporter.swift */; };
+		BF0000000000000000000018 /* PoetryCorpusParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000018 /* PoetryCorpusParser.swift */; };
+		BF0000000000000000000019 /* BundledPoetryImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000019 /* BundledPoetryImporter.swift */; };
+		BF000000000000000000001A /* BundledPoetryCorpus_part01.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000001A /* BundledPoetryCorpus_part01.txt */; };
+		BF000000000000000000001B /* BundledPoetryCorpus_part02.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000001B /* BundledPoetryCorpus_part02.txt */; };
+		BF000000000000000000001C /* BundledPoetryCorpus_part03.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000001C /* BundledPoetryCorpus_part03.txt */; };
+		BF000000000000000000001D /* BundledPoetryCorpus_part04.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000001D /* BundledPoetryCorpus_part04.txt */; };
+		BF000000000000000000001E /* BundledPoetryCorpus_part05.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000001E /* BundledPoetryCorpus_part05.txt */; };
+		BF000000000000000000001F /* BundledPoetryCorpus_part06.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000001F /* BundledPoetryCorpus_part06.txt */; };
+		BF0000000000000000000020 /* README_CORPUS.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000020 /* README_CORPUS.txt */; };
 		BF000000000000000000000E /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000E /* LibraryView.swift */; };
 		BF000000000000000000000F /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000000F /* ReaderView.swift */; };
 		BF0000000000000000000010 /* SettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000010 /* SettingsPanel.swift */; };
@@ -46,6 +55,15 @@
 		FR0000000000000000000000C /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
 		FR0000000000000000000000D /* StableUUID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableUUID.swift; sourceTree = "<group>"; };
 		FR00000000000000000000017 /* BundledSampleImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledSampleImporter.swift; sourceTree = "<group>"; };
+		FR00000000000000000000018 /* PoetryCorpusParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoetryCorpusParser.swift; sourceTree = "<group>"; };
+		FR00000000000000000000019 /* BundledPoetryImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledPoetryImporter.swift; sourceTree = "<group>"; };
+		FR0000000000000000000001A /* BundledPoetryCorpus_part01.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = BundledPoetryCorpus_part01.txt; sourceTree = "<group>"; };
+		FR0000000000000000000001B /* BundledPoetryCorpus_part02.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = BundledPoetryCorpus_part02.txt; sourceTree = "<group>"; };
+		FR0000000000000000000001C /* BundledPoetryCorpus_part03.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = BundledPoetryCorpus_part03.txt; sourceTree = "<group>"; };
+		FR0000000000000000000001D /* BundledPoetryCorpus_part04.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = BundledPoetryCorpus_part04.txt; sourceTree = "<group>"; };
+		FR0000000000000000000001E /* BundledPoetryCorpus_part05.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = BundledPoetryCorpus_part05.txt; sourceTree = "<group>"; };
+		FR0000000000000000000001F /* BundledPoetryCorpus_part06.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = BundledPoetryCorpus_part06.txt; sourceTree = "<group>"; };
+		FR00000000000000000000020 /* README_CORPUS.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = README_CORPUS.txt; sourceTree = "<group>"; };
 		FR0000000000000000000000E /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		FR0000000000000000000000F /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderView.swift; sourceTree = "<group>"; };
 		FR00000000000000000000010 /* SettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPanel.swift; sourceTree = "<group>"; };
@@ -85,9 +103,24 @@
 				GR00000000000000000000004 /* Models */,
 				GR00000000000000000000005 /* Services */,
 				GR00000000000000000000006 /* Views */,
+				GR00000000000000000000008 /* Resources */,
 				GR00000000000000000000007 /* SampleContent */,
 			);
 			path = MaozedongReader;
+			sourceTree = "<group>";
+		};
+		GR00000000000000000000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FR00000000000000000000020 /* README_CORPUS.txt */,
+				FR0000000000000000000001A /* BundledPoetryCorpus_part01.txt */,
+				FR0000000000000000000001B /* BundledPoetryCorpus_part02.txt */,
+				FR0000000000000000000001C /* BundledPoetryCorpus_part03.txt */,
+				FR0000000000000000000001D /* BundledPoetryCorpus_part04.txt */,
+				FR0000000000000000000001E /* BundledPoetryCorpus_part05.txt */,
+				FR0000000000000000000001F /* BundledPoetryCorpus_part06.txt */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		GR00000000000000000000007 /* SampleContent */ = {
@@ -131,6 +164,8 @@
 				FR0000000000000000000000C /* SpeechService.swift */,
 				FR0000000000000000000000D /* StableUUID.swift */,
 				FR00000000000000000000017 /* BundledSampleImporter.swift */,
+				FR00000000000000000000018 /* PoetryCorpusParser.swift */,
+				FR00000000000000000000019 /* BundledPoetryImporter.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -207,6 +242,13 @@
 				BF0000000000000000000014 /* 沁园春·雪.md in Resources */,
 				BF0000000000000000000015 /* 语录摘录.md in Resources */,
 				BF0000000000000000000016 /* 文章示例.md in Resources */,
+				BF000000000000000000001A /* BundledPoetryCorpus_part01.txt in Resources */,
+				BF000000000000000000001B /* BundledPoetryCorpus_part02.txt in Resources */,
+				BF000000000000000000001C /* BundledPoetryCorpus_part03.txt in Resources */,
+				BF000000000000000000001D /* BundledPoetryCorpus_part04.txt in Resources */,
+				BF000000000000000000001E /* BundledPoetryCorpus_part05.txt in Resources */,
+				BF000000000000000000001F /* BundledPoetryCorpus_part06.txt in Resources */,
+				BF0000000000000000000020 /* README_CORPUS.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -231,6 +273,8 @@
 				BF000000000000000000000C /* SpeechService.swift in Sources */,
 				BF000000000000000000000D /* StableUUID.swift in Sources */,
 				BF0000000000000000000017 /* BundledSampleImporter.swift in Sources */,
+				BF0000000000000000000018 /* PoetryCorpusParser.swift in Sources */,
+				BF0000000000000000000019 /* BundledPoetryImporter.swift in Sources */,
 				BF000000000000000000000E /* LibraryView.swift in Sources */,
 				BF000000000000000000000F /* ReaderView.swift in Sources */,
 				BF0000000000000000000010 /* SettingsPanel.swift in Sources */,

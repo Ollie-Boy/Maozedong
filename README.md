@@ -13,7 +13,8 @@
 ## 当前功能
 
 1. **书库页（Library）**
-   - 按内容类型分组展示：**诗词**、**语录**、**文章**（导入时按文件名与篇幅自动推测分类，也可长按或上下文菜单修改）
+   - 按内容类型分组展示：**诗词**、**语录**、**文章**、**选集**（导入时按文件名与篇幅自动推测分类，也可长按或上下文菜单修改）
+   - 内置 **毛泽东诗词** 全文（约 130 余篇，含注释），资源位于 `MaozedongReader/Resources/BundledPoetryCorpus_part*.txt`，首次安装或更新后自动合并进书库（按标题去重）
    - 顶部 **搜索**：在标题与正文中全文检索
    - 可按分组筛选（工具栏「分组」）
    - 左滑删除单篇文档
@@ -46,6 +47,7 @@ MaozedongReader.xcodeproj/   # Xcode 工程（打开此文件）
 MaozedongReader/
   MaozedongReaderApp.swift
   SampleContent/           # 可直接导入的 .md 示例
+  Resources/               # 内置诗词语料（UTF-8 分片 txt）
   Models/
     DocumentItem.swift
     DocumentCategory.swift
@@ -54,6 +56,8 @@ MaozedongReader/
     ReadingPreferences.swift
   Services/
     BundledSampleImporter.swift
+    BundledPoetryImporter.swift
+    PoetryCorpusParser.swift
     DocumentStore.swift
     PlainTextFileImporter.swift
     PlainTextParagraphs.swift
@@ -84,7 +88,9 @@ MaozedongReader/
 
 若你已有自己的 Xcode 工程，仍可将 `MaozedongReader/` 下所有 `.swift` 与 `Assets.xcassets` 拖入 target，并把入口改为 `MaozedongReaderApp.swift`。
 
-内置示例 Markdown 已作为 **Bundle 资源** 打进 App，路径为 `MaozedongReader/SampleContent/*.md`；也可通过「导入」从本机选取其他文件。
+内置示例 Markdown 已作为 **Bundle 资源** 打进 App，路径为 `MaozedongReader/SampleContent/*.md`；内置诗词语料为 `Resources/BundledPoetryCorpus_part*.txt`（格式见同目录 `README_CORPUS.txt`）。也可通过「导入」从本机选取其他文件。
+
+**版权声明**：应用内网页阅读（马克思主义文库等）仅作链接展示；打包的正文请以权利人许可为准，自行核对后再分发。
 
 ## 后续可扩展建议
 
