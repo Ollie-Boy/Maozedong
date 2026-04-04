@@ -229,6 +229,17 @@ final class DocumentStore: ObservableObject {
         guard !isPreviewMode else { return }
         guard documents.isEmpty else { return }
 
+        let bundled = BundledSampleImporter.loadDocuments()
+        if !bundled.isEmpty {
+            do {
+                documents = bundled
+                try saveDocuments()
+            } catch {
+                errorMessage = "写入示例文档失败：\(error.localizedDescription)"
+            }
+            return
+        }
+
         let poetry = DocumentItem(
             title: "示例：沁园春·雪",
             content: """

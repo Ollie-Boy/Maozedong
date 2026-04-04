@@ -8,7 +8,7 @@
 - 支持字体大小、行距、背景主题调整
 - 支持导入本地文件（`txt` / `md`）
 
-> 说明：当前仓库提供的是可直接放入 Xcode 工程的源码目录（`MaozedongReader/`）。
+> 说明：仓库根目录包含 **`MaozedongReader.xcodeproj`**，用 Xcode 直接打开即可在模拟器/真机上 **⌘R 运行与调试**。源码仍在 `MaozedongReader/` 目录下。
 
 ## 当前功能
 
@@ -42,6 +42,7 @@
 ## 目录结构
 
 ```text
+MaozedongReader.xcodeproj/   # Xcode 工程（打开此文件）
 MaozedongReader/
   MaozedongReaderApp.swift
   SampleContent/           # 可直接导入的 .md 示例
@@ -52,6 +53,7 @@ MaozedongReader/
     ReaderStateSnapshot.swift
     ReadingPreferences.swift
   Services/
+    BundledSampleImporter.swift
     DocumentStore.swift
     PlainTextFileImporter.swift
     PlainTextParagraphs.swift
@@ -65,13 +67,17 @@ MaozedongReader/
     SettingsPanel.swift
 ```
 
-## 如何在 Xcode 运行
+## 如何在 Xcode 运行（推荐）
 
-1. 打开 Xcode，新建 iOS App（SwiftUI + Swift）。
-2. 将本仓库的 `MaozedongReader/` 下所有 `.swift` 文件拖入你的工程 target（勾选 Copy items if needed）。
-3. 将 App 入口替换为 `MaozedongReaderApp.swift`（或把其中内容合并到你的 App 入口）。
-4. （可选）将 `MaozedongReader/SampleContent/` 拖入工程，便于在模拟器「文件」中选取导入。
-5. 选择 iPhone 模拟器或真机运行。
+1. 双击打开仓库根目录的 **`MaozedongReader.xcodeproj`**。
+2. 在 Xcode 左侧选中 **MaozedongReader** target → **Signing & Capabilities**，将 **Team** 设为你的 Apple ID 团队（真机调试必需；模拟器通常也可直接运行）。
+3. 顶部选择 **iPhone 模拟器**（或已连接的真机），按 **⌘R** 运行；断点与控制台调试与常规 iOS 工程相同。
+
+### 手动接入到其他工程（可选）
+
+若你已有自己的 Xcode 工程，仍可将 `MaozedongReader/` 下所有 `.swift` 与 `Assets.xcassets` 拖入 target，并把入口改为 `MaozedongReaderApp.swift`。
+
+内置示例 Markdown 已作为 **Bundle 资源** 打进 App，路径为 `MaozedongReader/SampleContent/*.md`；也可通过「导入」从本机选取其他文件。
 
 ## 后续可扩展建议
 
