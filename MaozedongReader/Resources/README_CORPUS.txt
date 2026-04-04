@@ -2,8 +2,10 @@ Bundled poetry corpus format
 =============================
 
 The app reads UTF-8 text from:
-- MaozedongReader/Resources/BundledPoetryCorpus.txt, or
+- BundledPoetryCorpus.txt (optional), or
 - BundledPoetryCorpus_part01.txt … part99.txt (concatenated in order)
+
+At runtime it looks under the bundle’s Resources subfolder first, then the **bundle root** (Xcode’s default copy location).
 
 Each work must start at the beginning of a line with:
   <序号> <标题>

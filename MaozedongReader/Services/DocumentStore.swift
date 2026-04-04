@@ -47,7 +47,8 @@ final class DocumentStore: ObservableObject {
         mergeBundledPoetryIfNeeded()
     }
 
-    private static let bundledPoetryMergeKey = "didMergeBundledPoetryCorpus_v1"
+    /// Bump when corpus content or load path changes so users pick up fixes (e.g. bundle resource location).
+    private static let bundledPoetryMergeKey = "didMergeBundledPoetryCorpus_v2"
 
     /// Merges bundled poetry corpus (by title) so app updates add new works without wiping the library.
     private func mergeBundledPoetryIfNeeded() {

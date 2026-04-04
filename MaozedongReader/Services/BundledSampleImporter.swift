@@ -9,6 +9,10 @@ enum BundledSampleImporter {
             urls = (bundle.urls(forResourcesWithExtension: "md", subdirectory: nil) ?? [])
                 .filter { $0.path.contains("SampleContent") }
         }
+        if urls.isEmpty {
+            let bases = ["沁园春·雪", "语录摘录", "文章示例"]
+            urls = bases.compactMap { bundle.url(forResource: $0, withExtension: "md", subdirectory: nil) }
+        }
         let sorted = urls.sorted { $0.lastPathComponent < $1.lastPathComponent }
         var items: [DocumentItem] = []
         for url in sorted {
