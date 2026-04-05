@@ -95,73 +95,109 @@ struct LibraryView: View {
                         systemImage: "book.closed",
                         description: Text("点击右上角“导入”来添加 txt 或 md 文件。")
                     )
-                } else if filteredDocuments.isEmpty {
-                    ContentUnavailableView(
-                        "无匹配结果",
-                        systemImage: "magnifyingglass",
-                        description: Text("试试其他关键词或清除分组筛选。")
-                    )
                 } else {
                     List {
-                            if let cont = store.continueReadingDocument {
-                                Section {
-                                    Button {
-                                        if cont.category == .poetry {
-                                            path.append(LibraryRoute.poetry(cont.id))
-                                        } else {
-                                            path.append(LibraryRoute.anthology(cont.id))
-                                        }
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 6) {
-                                            Text("继续阅读")
-                                                .font(.caption)
+                            Section {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "magnifyingglass")
+                                        .foregroundStyle(.secondary)
+                                    TextField("搜索标题与全文", text: $libraryQueryRaw)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled(true)
+                                    if !libraryQueryRaw.isEmpty {
+                                        Button {
+                                            libraryQueryRaw = ""
+                                            libraryQuery = ""
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
                                                 .foregroundStyle(.secondary)
-                                            Text(cont.title)
-                                                .font(.headline)
-                                                .foregroundStyle(.primary)
                                         }
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel("清除搜索")
                                     }
                                 }
+                                .padding(.vertical, 4)
                             }
-                            if categoryFilter == nil {
-                            CollapsibleLibrarySection(
-                                category: .poetry,
-                                isExpanded: $poetrySectionExpanded,
-                                items: sortedInCategory(.poetry)
-                            ) { doc in
-                                documentRow(doc, labelLeadingInset: 0)
-                            }
+                            .listRowBackground(store.readingPreferences.listRowBackgroundColor)
 
-                            let anth = sortedInCategory(.anthology)
-                            if !anth.isEmpty {
+                            if filteredDocuments.isEmpty {
                                 Section {
-                                    if anthologySectionExpanded {
-                                        ForEach(anthologyMajorGroups(from: anth)) { major in
-                                            anthologyMajorSection(major: major)
-                                        }
+                                    VStack(spacing: 10) {
+                                        Image(systemName: "magnifyingglass")
+                                            .font(.title2)
+                                            .foregroundStyle(.secondary)
+                                        Text("无匹配结果")
+                                            .font(.headline)
+                                        Text("试试其他关键词或清除分组筛选。")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                            .multilineTextAlignment(.center)
                                     }
-                                } header: {
-                                    Button {
-                                        anthologySectionExpanded.toggle()
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: anthologySectionExpanded ? "chevron.down" : "chevron.right")
-                                                .font(.caption.weight(.semibold))
-                                                .foregroundStyle(.secondary)
-                                            Label(DocumentCategory.anthology.displayName, systemImage: DocumentCategory.anthology.systemImage)
-                                            Spacer()
-                                            Text("\(anth.count)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .textCase(nil)
-                                    }
-                                    .buttonStyle(.plain)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 20)
                                 }
-                            }
+                                .listRowBackground(store.readingPreferences.listRowBackgroundColor)
                             } else {
-                                ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
-                                    documentRow(doc, labelLeadingInset: 0)
+                                if let cont = store.continueReadingDocument {
+                                    Section {
+                                        Button {
+                                            if cont.category == .poetry {
+                                                path.append(LibraryRoute.poetry(cont.id))
+                                            } else {
+                                                path.append(LibraryRoute.anthology(cont.id))
+                                            }
+                                        } label: {
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                Text("继续阅读")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                                Text(cont.title)
+                                                    .font(.headline)
+                                                    .foregroundStyle(.primary)
+                                            }
+                                        }
+                                    }
+                                }
+                                if categoryFilter == nil {
+                                    CollapsibleLibrarySection(
+                                        category: .poetry,
+                                        isExpanded: $poetrySectionExpanded,
+                                        items: sortedInCategory(.poetry)
+                                    ) { doc in
+                                        documentRow(doc, labelLeadingInset: 0)
+                                    }
+
+                                    let anth = sortedInCategory(.anthology)
+                                    if !anth.isEmpty {
+                                        Section {
+                                            if anthologySectionExpanded {
+                                                ForEach(anthologyMajorGroups(from: anth)) { major in
+                                                    anthologyMajorSection(major: major)
+                                                }
+                                            }
+                                        } header: {
+                                            Button {
+                                                anthologySectionExpanded.toggle()
+                                            } label: {
+                                                HStack {
+                                                    Image(systemName: anthologySectionExpanded ? "chevron.down" : "chevron.right")
+                                                        .font(.caption.weight(.semibold))
+                                                        .foregroundStyle(.secondary)
+                                                    Label(DocumentCategory.anthology.displayName, systemImage: DocumentCategory.anthology.systemImage)
+                                                    Spacer()
+                                                    Text("\(anth.count)")
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                .textCase(nil)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                } else {
+                                    ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
+                                        documentRow(doc, labelLeadingInset: 0)
+                                    }
                                 }
                             }
                     }
@@ -177,7 +213,6 @@ struct LibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .searchable(text: $libraryQueryRaw, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索标题与全文")
         .onChange(of: libraryQueryRaw) { _, raw in
             librarySearchDebounceTask?.cancel()
             let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
