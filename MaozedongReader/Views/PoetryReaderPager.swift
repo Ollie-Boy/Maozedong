@@ -3,33 +3,43 @@ import SwiftUI
 /// Horizontal paging between poetry items in chronological (display) order.
 struct PoetryReaderPager: View {
     @EnvironmentObject private var store: DocumentStore
+    @Environment(\.dismiss) private var dismiss
 
     private let orderedPoems: [DocumentItem]
     @State private var selectionId: UUID
+    var onRequestPop: (() -> Void)?
 
-    init(allDocuments: [DocumentItem], initial: DocumentItem) {
+    init(allDocuments: [DocumentItem], initial: DocumentItem, onRequestPop: (() -> Void)? = nil) {
         orderedPoems = allDocuments
             .filter { $0.category == .poetry }
             .sorted(by: DocumentItem.displaySort)
         _selectionId = State(initialValue: initial.id)
+        self.onRequestPop = onRequestPop
     }
 
-    private var currentTitle: String {
-        orderedPoems.first(where: { $0.id == selectionId })?.title ?? ""
+    private var ids: [UUID] {
+        orderedPoems.map(\.id)
     }
 
     var body: some View {
         Group {
             if orderedPoems.count <= 1, let only = orderedPoems.first {
-                ReaderView(document: only, usesExternalNavigationTitle: false)
+                ReaderView(document: only)
             } else {
                 TabView(selection: $selectionId) {
                     ForEach(orderedPoems) { doc in
-                        ReaderView(document: doc, usesExternalNavigationTitle: true)
+                        ReaderView(document: doc)
                             .tag(doc.id)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                .modifier(PagerBoundaryPopModifier(orderedIds: ids, selection: $selectionId, onPop: {
+                    if let onRequestPop {
+                        onRequestPop()
+                    } else {
+                        dismiss()
+                    }
+                }))
             }
         }
         .background(store.readingPreferences.backgroundColor.ignoresSafeArea())
@@ -37,5 +47,8 @@ struct PoetryReaderPager: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
         .toolbarBackground(.visible, for: .bottomBar)
+        .onChange(of: selectionId) { _, id in
+            store.recordLastOpenedDocument(documentId: id)
+        }
     }
 }

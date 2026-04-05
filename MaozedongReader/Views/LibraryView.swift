@@ -14,6 +14,7 @@ private struct AnthologyMajorGroup: Identifiable {
 
 struct LibraryView: View {
     @EnvironmentObject private var store: DocumentStore
+    @Binding var path: NavigationPath
     @State private var showImporter = false
     @State private var libraryQuery = ""
     @State private var categoryFilter: DocumentCategory?
@@ -100,6 +101,26 @@ struct LibraryView: View {
                     )
                 } else {
                     List {
+                            if let cont = store.continueReadingDocument {
+                                Section {
+                                    Button {
+                                        if cont.category == .poetry {
+                                            path.append(LibraryRoute.poetry(cont.id))
+                                        } else {
+                                            path.append(LibraryRoute.anthology(cont.id))
+                                        }
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("继续阅读")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            Text(cont.title)
+                                                .font(.headline)
+                                                .foregroundStyle(.primary)
+                                        }
+                                    }
+                                }
+                            }
                             if categoryFilter == nil {
                             CollapsibleLibrarySection(
                                 category: .poetry,
@@ -172,6 +193,7 @@ struct LibraryView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink("设置") {
                         SettingsPanel(preferences: $store.readingPreferences)
+                            .environmentObject(store)
                             .scrollContentBackground(.hidden)
                             .background(store.readingPreferences.backgroundColor)
                             .navigationTitle("阅读设置")
@@ -207,6 +229,26 @@ struct LibraryView: View {
             }, message: {
                 Text(store.errorMessage ?? "")
             })
+            .navigationDestination(for: LibraryRoute.self) { route in
+                switch route {
+                case let .poetry(id):
+                    if let doc = store.documents.first(where: { $0.id == id }) {
+                        PoetryReaderPager(allDocuments: store.documents, initial: doc) {
+                            path.removeLast()
+                        }
+                    } else {
+                        Text("篇目已不存在").onAppear { path.removeLast() }
+                    }
+                case let .anthology(id):
+                    if let doc = store.documents.first(where: { $0.id == id }) {
+                        AnthologyReaderPager(allDocuments: store.documents, initial: doc) {
+                            path.removeLast()
+                        }
+                    } else {
+                        Text("篇目已不存在").onAppear { path.removeLast() }
+                    }
+                }
+            }
     }
 
     @ViewBuilder
@@ -284,15 +326,15 @@ struct LibraryView: View {
     private func documentRow(_ doc: DocumentItem, labelLeadingInset: CGFloat = 0) -> some View {
         Group {
             if doc.category == .poetry {
-                NavigationLink {
-                    PoetryReaderPager(allDocuments: store.documents, initial: doc)
+                Button {
+                    path.append(LibraryRoute.poetry(doc.id))
                 } label: {
                     rowLabel(doc)
                         .padding(.leading, labelLeadingInset)
                 }
             } else {
-                NavigationLink {
-                    AnthologyReaderPager(allDocuments: store.documents, initial: doc)
+                Button {
+                    path.append(LibraryRoute.anthology(doc.id))
                 } label: {
                     rowLabel(doc)
                         .padding(.leading, labelLeadingInset)
@@ -385,7 +427,7 @@ private struct CollapsibleLibrarySection<Row: View>: View {
 
 #Preview {
     NavigationStack {
-        LibraryView()
+        LibraryView(path: .constant(NavigationPath()))
     }
     .environmentObject(DocumentStore(previewMode: true))
 }

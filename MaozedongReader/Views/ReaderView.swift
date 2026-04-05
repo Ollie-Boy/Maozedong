@@ -19,8 +19,6 @@ struct ReaderView: View {
     @StateObject private var speechService = SpeechService()
 
     let document: DocumentItem
-    /// When embedded in `PoetryReaderPager`, the parent sets the navigation title.
-    var usesExternalNavigationTitle: Bool = false
     @State private var showingSettings = false
     @State private var showingTOC = false
     @State private var showingSearch = false
@@ -37,6 +35,7 @@ struct ReaderView: View {
 
     @State private var scrollToBlockId: UUID?
     @State private var progressSaveTask: Task<Void, Never>?
+    @State private var expandedNoteBlockIds: Set<UUID> = []
 
     private let scrollSpaceName = "readerScroll"
 
@@ -101,7 +100,8 @@ struct ReaderView: View {
                 }
             }
         }
-        .modifier(ReaderBarTitleModifier(title: document.title, useToolbarPrincipal: usesExternalNavigationTitle))
+        .navigationTitle(document.title)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
@@ -113,6 +113,7 @@ struct ReaderView: View {
                 } label: {
                     Label("目录", systemImage: "list.bullet")
                 }
+                .disabled(headings.isEmpty)
 
                 Button {
                     searchQuery = ""
@@ -150,6 +151,7 @@ struct ReaderView: View {
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
                 SettingsPanel(preferences: $store.readingPreferences)
+                    .environmentObject(store)
                     .scrollContentBackground(.hidden)
                     .background(store.readingPreferences.backgroundColor)
                     .navigationTitle("阅读设置")
@@ -168,18 +170,13 @@ struct ReaderView: View {
         .sheet(isPresented: $showingTOC) {
             NavigationStack {
                 List {
-                    if headings.isEmpty {
-                        Text("本文暂无标题（使用 Markdown 的 # 标题可生成目录）")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(headings, id: \.block.id) { entry in
-                            Button {
-                                scrollToBlockId = entry.block.id
-                                showingTOC = false
-                            } label: {
-                                Text(entry.title)
-                                    .padding(.leading, CGFloat(entry.level - 1) * 12)
-                            }
+                    ForEach(headings, id: \.block.id) { entry in
+                        Button {
+                            scrollToBlockId = entry.block.id
+                            showingTOC = false
+                        } label: {
+                            Text(entry.title)
+                                .padding(.leading, CGFloat(entry.level - 1) * 12)
                         }
                     }
                 }
@@ -232,8 +229,10 @@ struct ReaderView: View {
         }
         .onAppear {
             prepareContent()
+            store.recordLastOpenedDocument(documentId: document.id)
         }
         .onChange(of: document.id) { _, _ in
+            expandedNoteBlockIds = []
             prepareContent()
         }
         .onChange(of: document.content) { _, _ in
@@ -365,6 +364,52 @@ struct ReaderView: View {
             Divider()
                 .background(secondary.opacity(0.35))
                 .padding(.vertical, 8)
+
+        case let .noteSection(lines):
+            let expanded = expandedNoteBlockIds.contains(block.id)
+            VStack(alignment: .leading, spacing: 10) {
+                Button {
+                    if expandedNoteBlockIds.contains(block.id) {
+                        expandedNoteBlockIds.remove(block.id)
+                    } else {
+                        expandedNoteBlockIds.insert(block.id)
+                    }
+                } label: {
+                    HStack {
+                        Text("注释")
+                            .font(ReaderTypography.bodyFont(size: CGFloat(baseSize) * 0.92, weight: .semibold))
+                            .foregroundStyle(secondary)
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(secondary)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+                if expanded {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                            Text(InlineMarkdownFormatter.attributedLine(
+                                line,
+                                baseFontSize: CGFloat(baseSize) * 0.94,
+                                textColor: secondary,
+                                secondaryColor: secondary.opacity(0.9)
+                            ))
+                            .lineSpacing(store.readingPreferences.lineSpacing * 0.85)
+                        }
+                    }
+                    .padding(.leading, 10)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(secondary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(quoteTint.opacity(0.35), lineWidth: 1)
+                    )
+                }
+            }
+            .padding(.top, 4)
         }
     }
 
@@ -480,33 +525,7 @@ struct ReaderView: View {
         case let .bullet(items): return String((items.first ?? "").prefix(48))
         case let .ordered(items): return String((items.first ?? "").prefix(48))
         case .horizontalRule: return "分隔线"
-        }
-    }
-}
-
-/// Avoids empty `navigationTitle` on iOS 18+ (placeholder bar / flicker); pager uses toolbar principal title.
-private struct ReaderBarTitleModifier: ViewModifier {
-    let title: String
-    let useToolbarPrincipal: Bool
-    @EnvironmentObject private var store: DocumentStore
-
-    func body(content: Content) -> some View {
-        if useToolbarPrincipal {
-            content
-                .navigationTitle(" ")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .principal) {
-                        Text(title)
-                            .font(.headline)
-                            .foregroundStyle(store.readingPreferences.textColor)
-                            .lineLimit(1)
-                    }
-                }
-        } else {
-            content
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.inline)
+        case let .noteSection(ls): return String((ls.first ?? "注释").prefix(48))
         }
     }
 }

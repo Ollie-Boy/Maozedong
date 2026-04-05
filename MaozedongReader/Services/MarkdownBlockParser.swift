@@ -8,6 +8,8 @@ struct MarkdownBlock: Identifiable, Equatable {
         case bullet(items: [String])
         case ordered(items: [String])
         case horizontalRule
+        /// Collapsed 注释 body (after `---` + `## 注释`); rendered as footnote-style region.
+        case noteSection(lines: [String])
     }
 
     let id: UUID
@@ -45,6 +47,8 @@ extension MarkdownBlock {
             return items
         case .horizontalRule:
             return []
+        case let .noteSection(lines):
+            return lines
         }
     }
 }
@@ -134,7 +138,33 @@ enum MarkdownBlockParser {
             blocks.append(MarkdownBlock(kind: .paragraph(lines: para)))
         }
 
-        return blocks
+        return postprocessPoetryNotes(blocks)
+    }
+
+    /// Merges `---` + `## 注释` + following paragraphs into a single `.noteSection` for collapsible footnote UI.
+    private static func postprocessPoetryNotes(_ blocks: [MarkdownBlock]) -> [MarkdownBlock] {
+        var out: [MarkdownBlock] = []
+        var i = 0
+        while i < blocks.count {
+            if i + 2 < blocks.count,
+               case .horizontalRule = blocks[i].kind,
+               case let .heading(level, text) = blocks[i + 1].kind,
+               level == 2,
+               text == "注释" {
+                var lines: [String] = []
+                var j = i + 2
+                while j < blocks.count, case let .paragraph(ls) = blocks[j].kind {
+                    lines.append(contentsOf: ls)
+                    j += 1
+                }
+                out.append(MarkdownBlock(id: blocks[i + 1].id, kind: .noteSection(lines: lines)))
+                i = j
+                continue
+            }
+            out.append(blocks[i])
+            i += 1
+        }
+        return out
     }
 
     static func plainText(from blocks: [MarkdownBlock]) -> String {
@@ -173,6 +203,8 @@ enum MarkdownBlockParser {
             needle = items.first ?? ""
         case .horizontalRule:
             needle = "---"
+        case let .noteSection(lines):
+            needle = lines.first ?? ""
         }
 
         guard let startRange = findSubstring(needle) else { return nil }
@@ -189,6 +221,7 @@ enum MarkdownBlockParser {
             case let .bullet(items): nextNeedle = items.first ?? ""
             case let .ordered(items): nextNeedle = items.first ?? ""
             case .horizontalRule: nextNeedle = "---"
+            case let .noteSection(ls): nextNeedle = ls.first ?? ""
             }
             if let nr = findSubstring(nextNeedle), nr.lowerBound > start {
                 end = nr.lowerBound

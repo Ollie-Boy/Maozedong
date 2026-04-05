@@ -1,9 +1,31 @@
 import SwiftUI
 
 struct ReadingPreferences: Codable, Equatable {
-    var fontSize: Double = 18
-    var lineSpacing: Double = 7
-    var theme: Theme = .sepia
+    var fontSize: Double
+    var lineSpacing: Double
+    var theme: Theme
+    /// 护眼偏暖（略深、略黄），仅在选择「护眼」时生效。
+    var sepiaWarmTint: Bool
+    /// 22:00–07:00 自动使用深色（需未勾选跟随系统）。
+    var autoDarkAtNight: Bool
+    /// 使用系统浅色/深色，忽略下方手动主题（护眼仍为手动）。
+    var followSystemAppearance: Bool
+
+    init(
+        fontSize: Double = 18,
+        lineSpacing: Double = 7,
+        theme: Theme = .sepia,
+        sepiaWarmTint: Bool = false,
+        autoDarkAtNight: Bool = false,
+        followSystemAppearance: Bool = false
+    ) {
+        self.fontSize = fontSize
+        self.lineSpacing = lineSpacing
+        self.theme = theme
+        self.sepiaWarmTint = sepiaWarmTint
+        self.autoDarkAtNight = autoDarkAtNight
+        self.followSystemAppearance = followSystemAppearance
+    }
 
     enum Theme: String, CaseIterable, Codable, Identifiable {
         case light
@@ -34,6 +56,11 @@ struct ReadingPreferences: Codable, Equatable {
             }
         }
 
+        func backgroundColor(sepiaWarm: Bool) -> Color {
+            guard self == .sepia, sepiaWarm else { return backgroundColor }
+            return Color(red: 0.94, green: 0.90, blue: 0.78)
+        }
+
         var textColor: Color {
             switch self {
             case .light, .sepia:
@@ -45,7 +72,7 @@ struct ReadingPreferences: Codable, Equatable {
     }
 
     var backgroundColor: Color {
-        theme.backgroundColor
+        theme.backgroundColor(sepiaWarm: sepiaWarmTint)
     }
 
     var textColor: Color {
@@ -75,4 +102,28 @@ struct ReadingPreferences: Codable, Equatable {
 
 extension ReadingPreferences {
     static let `default` = ReadingPreferences()
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? 18
+        lineSpacing = try c.decodeIfPresent(Double.self, forKey: .lineSpacing) ?? 7
+        theme = try c.decodeIfPresent(Theme.self, forKey: .theme) ?? .sepia
+        sepiaWarmTint = try c.decodeIfPresent(Bool.self, forKey: .sepiaWarmTint) ?? false
+        autoDarkAtNight = try c.decodeIfPresent(Bool.self, forKey: .autoDarkAtNight) ?? false
+        followSystemAppearance = try c.decodeIfPresent(Bool.self, forKey: .followSystemAppearance) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(fontSize, forKey: .fontSize)
+        try c.encode(lineSpacing, forKey: .lineSpacing)
+        try c.encode(theme, forKey: .theme)
+        try c.encode(sepiaWarmTint, forKey: .sepiaWarmTint)
+        try c.encode(autoDarkAtNight, forKey: .autoDarkAtNight)
+        try c.encode(followSystemAppearance, forKey: .followSystemAppearance)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case fontSize, lineSpacing, theme, sepiaWarmTint, autoDarkAtNight, followSystemAppearance
+    }
 }

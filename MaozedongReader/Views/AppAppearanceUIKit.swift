@@ -3,9 +3,10 @@ import UIKit
 
 /// Global UIKit chrome so navigation, search bars, and TabView footers match the reading theme.
 enum AppAppearanceUIKit {
-    static func syncGlobalChrome(theme: ReadingPreferences.Theme) {
-        syncTabBar(theme: theme)
-        let bg = uiBackground(for: theme)
+    static func syncGlobalChrome(preferences: ReadingPreferences, environmentScheme: ColorScheme) {
+        let theme = preferences.resolvedChromeTheme(environmentScheme: environmentScheme)
+        applyTabBarAppearance(theme: theme, sepiaWarm: preferences.sepiaWarmTint)
+        let bg = uiBackground(for: theme, sepiaWarm: preferences.sepiaWarmTint)
         let label: UIColor = (theme == .dark) ? .white : .black
 
         let nav = UINavigationBarAppearance()
@@ -31,7 +32,7 @@ enum AppAppearanceUIKit {
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
 
         // Grouped list cells: tint to match reading theme.
-        let rowUICol = uiBackground(for: theme)
+        let rowUICol = uiBackground(for: theme, sepiaWarm: preferences.sepiaWarmTint)
         var cellBg = UIBackgroundConfiguration.listGroupedCell()
         cellBg.backgroundColor = rowUICol
         UITableViewCell.appearance().backgroundConfiguration = cellBg
@@ -43,11 +44,11 @@ enum AppAppearanceUIKit {
     }
 
     static func syncTabBar(with theme: ReadingPreferences.Theme) {
-        syncTabBar(theme: theme)
+        applyTabBarAppearance(theme: theme, sepiaWarm: false)
     }
 
-    private static func syncTabBar(theme: ReadingPreferences.Theme) {
-        let bg = uiBackground(for: theme)
+    private static func applyTabBarAppearance(theme: ReadingPreferences.Theme, sepiaWarm: Bool) {
+        let bg = uiBackground(for: theme, sepiaWarm: sepiaWarm)
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = bg
@@ -56,13 +57,16 @@ enum AppAppearanceUIKit {
         tab.scrollEdgeAppearance = appearance
     }
 
-    private static func uiBackground(for theme: ReadingPreferences.Theme) -> UIColor {
+    private static func uiBackground(for theme: ReadingPreferences.Theme, sepiaWarm: Bool) -> UIColor {
         switch theme {
         case .light:
             return .systemBackground
         case .dark:
             return .black
         case .sepia:
+            if sepiaWarm {
+                return UIColor(red: 0.94, green: 0.90, blue: 0.78, alpha: 1)
+            }
             return UIColor(red: 0.96, green: 0.93, blue: 0.86, alpha: 1)
         }
     }

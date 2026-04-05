@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension ReadingPreferences.Theme {
-    /// Drives system chrome (status bar icons, etc.) to match reading theme.
+    /// Drives system chrome when not using `followSystemAppearance` / night auto.
     var preferredColorScheme: ColorScheme? {
         switch self {
         case .light, .sepia: return .light

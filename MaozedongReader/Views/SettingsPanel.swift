@@ -1,8 +1,15 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsPanel: View {
+    @EnvironmentObject private var store: DocumentStore
     @Binding var preferences: ReadingPreferences
     var onSave: (() -> Void)?
+
+    @State private var showExport = false
+    @State private var showImportBackup = false
+    @State private var exportDocument: BackupFileDocument?
+    @State private var backupAlert: String?
 
     var body: some View {
         Form {
@@ -23,13 +30,67 @@ struct SettingsPanel: View {
             }
 
             Section("背景与文字") {
+                Toggle("跟随系统外观", isOn: $preferences.followSystemAppearance)
+                Toggle("夜间自动深色（22:00–07:00）", isOn: $preferences.autoDarkAtNight)
+                    .disabled(preferences.followSystemAppearance)
                 Picker("阅读主题", selection: $preferences.theme) {
                     ForEach(ReadingPreferences.Theme.allCases) { theme in
                         Text(theme.displayName).tag(theme)
                     }
                 }
                 .pickerStyle(.segmented)
+                .disabled(preferences.followSystemAppearance)
+                Toggle("护眼偏暖（略深、略黄）", isOn: $preferences.sepiaWarmTint)
+                    .disabled(preferences.theme != .sepia)
             }
+
+            Section("数据") {
+                Button("导出备份（JSON）") {
+                    do {
+                        exportDocument = BackupFileDocument(data: try store.exportBackupData())
+                        showExport = true
+                    } catch {
+                        backupAlert = "导出失败：\(error.localizedDescription)"
+                    }
+                }
+                Button("从备份恢复…") {
+                    showImportBackup = true
+                }
+            }
+        }
+        .fileExporter(
+            isPresented: $showExport,
+            document: $exportDocument,
+            contentType: .json,
+            defaultFilename: "MaozedongReader-backup"
+        ) { _ in
+            exportDocument = nil
+        }
+        .fileImporter(
+            isPresented: $showImportBackup,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            do {
+                let urls = try result.get()
+                guard let url = urls.first else { return }
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() } }
+                let data = try Data(contentsOf: url)
+                try store.importBackup(data: data)
+                TodayQuoteStore.refreshIfNeeded(from: store.documents)
+                backupAlert = "已从备份恢复。"
+            } catch {
+                backupAlert = "恢复失败：\(error.localizedDescription)"
+            }
+        }
+        .alert("备份", isPresented: Binding(
+            get: { backupAlert != nil },
+            set: { if !$0 { backupAlert = nil } }
+        )) {
+            Button("好") { backupAlert = nil }
+        } message: {
+            Text(backupAlert ?? "")
         }
         .onChange(of: preferences) { _, _ in
             onSave?()

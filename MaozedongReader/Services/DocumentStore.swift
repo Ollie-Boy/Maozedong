@@ -47,6 +47,7 @@ final class DocumentStore: ObservableObject {
         normalizeDocumentsAfterLoad()
         mergeBundledPoetryIfNeeded()
         mergeBundledAnthologyIfNeeded()
+        TodayQuoteStore.refreshIfNeeded(from: documents)
     }
 
 
@@ -206,6 +207,7 @@ final class DocumentStore: ObservableObject {
 
         documents.sort(by: DocumentItem.displaySort)
         try saveDocuments()
+        TodayQuoteStore.refreshIfNeeded(from: documents)
     }
 
     func deleteDocuments(at offsets: IndexSet) {
@@ -215,6 +217,10 @@ final class DocumentStore: ObservableObject {
         for doc in removed {
             next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
             next.bookmarks.removeAll { $0.documentId == doc.id }
+            if next.lastOpenedDocumentId == doc.id {
+                next.lastOpenedDocumentId = nil
+                next.lastOpenedAt = nil
+            }
         }
         readerState = next
         do {
@@ -232,6 +238,10 @@ final class DocumentStore: ObservableObject {
         var next = readerState
         next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
         next.bookmarks.removeAll { $0.documentId == doc.id }
+        if next.lastOpenedDocumentId == doc.id {
+            next.lastOpenedDocumentId = nil
+            next.lastOpenedAt = nil
+        }
         readerState = next
         do {
             try saveDocuments()
@@ -260,6 +270,49 @@ final class DocumentStore: ObservableObject {
         next.progressUTF16ByDocumentId[documentId] = max(0, utf16Offset)
         readerState = next
         saveReaderState()
+    }
+
+    func recordLastOpenedDocument(documentId: UUID) {
+        guard !isPreviewMode else { return }
+        var next = readerState
+        next.lastOpenedDocumentId = documentId
+        next.lastOpenedAt = Date()
+        readerState = next
+        saveReaderState()
+    }
+
+    var continueReadingDocument: DocumentItem? {
+        guard let id = readerState.lastOpenedDocumentId else { return nil }
+        return documents.first { $0.id == id }
+    }
+
+    /// Exports `documents.json` + `reader_state.json` + `reading_preferences.json` into one JSON file (offline backup).
+    func exportBackupData() throws -> Data {
+        let payload = BackupPayload(
+            documents: documents,
+            readerState: readerState,
+            readingPreferences: readingPreferences,
+            exportedAt: Date()
+        )
+        let enc = JSONEncoder()
+        enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+        enc.dateEncodingStrategy = .iso8601
+        return try enc.encode(payload)
+    }
+
+    /// Replaces library + reader state + preferences from a backup file.
+    func importBackup(data: Data) throws {
+        guard !isPreviewMode else { return }
+        let dec = JSONDecoder()
+        dec.dateDecodingStrategy = .iso8601
+        let payload = try dec.decode(BackupPayload.self, from: data)
+        documents = payload.documents.sorted(by: DocumentItem.displaySort)
+        readerState = payload.readerState
+        readingPreferences = payload.readingPreferences
+        try saveDocuments()
+        saveReaderState()
+        saveReadingPreferences()
+        TodayQuoteStore.refreshIfNeeded(from: documents)
     }
 
     func progressUTF16Offset(for documentId: UUID) -> Int? {
@@ -366,5 +419,12 @@ final class DocumentStore: ObservableObject {
         let data = try JSONEncoder().encode(documents)
         try data.write(to: documentsMetadataURL, options: .atomic)
     }
-
 }
+
+private struct BackupPayload: Codable {
+    var documents: [DocumentItem]
+    var readerState: ReaderStateSnapshot
+    var readingPreferences: ReadingPreferences
+    var exportedAt: Date
+}
+
