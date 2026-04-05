@@ -278,8 +278,14 @@ struct ReaderView: View {
                 .onPreferenceChange(ViewportHeightKey.self) { h in
                     if h > 1 { viewportHeight = h }
                 }
-                .onChange(of: scrollContentMinY) { _, _ in scheduleProgressSave(blocks: blocks) }
-                .onChange(of: blockFrames) { _, _ in scheduleProgressSave(blocks: blocks) }
+                // Off-screen pager siblings still receive layout preferences; saving progress from every page
+                // republished `readerState` and caused a feedback loop (freeze / 100% CPU).
+                .onChange(of: scrollContentMinY) { _, _ in
+                    if presentsNavigationChrome { scheduleProgressSave(blocks: blocks) }
+                }
+                .onChange(of: blockFrames) { _, _ in
+                    if presentsNavigationChrome { scheduleProgressSave(blocks: blocks) }
+                }
                 .onAppear {
                     restoreScrollIfNeeded(proxy: proxy, blocks: blocks)
                 }

@@ -264,8 +264,10 @@ final class DocumentStore: ObservableObject {
 
     func setReadingProgress(documentId: UUID, utf16Offset: Int) {
         guard !isPreviewMode else { return }
+        let u = max(0, utf16Offset)
+        if readerState.progressUTF16ByDocumentId[documentId] == u { return }
         var next = readerState
-        next.progressUTF16ByDocumentId[documentId] = max(0, utf16Offset)
+        next.progressUTF16ByDocumentId[documentId] = u
         readerState = next
         scheduleReaderStateDiskWrite()
     }
