@@ -4,6 +4,7 @@ import SwiftUI
 struct MaozedongReaderApp: App {
     @StateObject private var store = DocumentStore()
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
     @State private var navPath = NavigationPath()
 
     var body: some Scene {
@@ -12,6 +13,11 @@ struct MaozedongReaderApp: App {
                 LibraryView(path: $navPath)
             }
             .environmentObject(store)
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background || phase == .inactive {
+                    store.endReadingSession()
+                }
+            }
             .preferredColorScheme(store.readingPreferences.preferredColorSchemeResolved(environmentScheme: colorScheme))
             .onAppear {
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)

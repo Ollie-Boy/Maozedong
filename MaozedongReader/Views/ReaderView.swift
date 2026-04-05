@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private struct ScrollContentMinYKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
@@ -23,6 +24,7 @@ private struct ViewportHeightKey: PreferenceKey {
 
 struct ReaderView: View {
     @EnvironmentObject private var store: DocumentStore
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var speechService = SpeechService()
 
     let document: DocumentItem
@@ -33,6 +35,14 @@ struct ReaderView: View {
     @State private var showingSearch = false
     @State private var showingBookmarks = false
     @State private var searchQuery = ""
+    @State private var selectionMode = false
+    @State private var textSelection = NSRange(location: 0, length: 0)
+    @State private var showSnippetActions = false
+    @State private var snippetNoteDraft = ""
+    @State private var showExportShare = false
+    @State private var exportShareURL: URL?
+    @State private var showReadingStats = false
+    @State private var exportError: String?
 
     @State private var cachedBlocks: [MarkdownBlock] = []
     @State private var plainSegments: [(text: String, utf16Start: Int)] = []
@@ -79,6 +89,36 @@ struct ReaderView: View {
                             showingBookmarks = true
                         } label: {
                             Label("书签", systemImage: "bookmark")
+                        }
+
+                        Button {
+                            selectionMode.toggle()
+                            if !selectionMode {
+                                textSelection = NSRange(location: 0, length: 0)
+                            }
+                        } label: {
+                            Label(selectionMode ? "正文" : "划选", systemImage: selectionMode ? "doc.text" : "cursorarrow.rays")
+                        }
+
+                        if selectionMode, textSelection.length > 0 {
+                            Button {
+                                snippetNoteDraft = ""
+                                showSnippetActions = true
+                            } label: {
+                                Label("摘录", systemImage: "text.quote")
+                            }
+                        }
+
+                        Button {
+                            exportCurrentDocument()
+                        } label: {
+                            Label("导出", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            showReadingStats = true
+                        } label: {
+                            Label("统计", systemImage: "clock")
                         }
 
                         Button {
@@ -165,12 +205,21 @@ struct ReaderView: View {
             NavigationStack {
                 ReaderBookmarksSheet(
                     bookmarks: store.bookmarks(for: document.id),
-                    onJump: { offset in
+                    snippets: store.textSnippets(for: document.id),
+                    readingSeconds: store.readingSeconds(for: document.id),
+                    onJumpBookmark: { offset in
                         jumpToUTF16(offset, blocks: blocks)
                         showingBookmarks = false
                     },
-                    onRemove: { ids in
+                    onJumpSnippet: { start, end in
+                        jumpToSnippetRange(utf16Start: start, utf16End: end, blocks: blocks)
+                        showingBookmarks = false
+                    },
+                    onRemoveBookmarks: { ids in
                         store.removeBookmarks(ids: ids)
+                    },
+                    onRemoveSnippets: { ids in
+                        store.removeTextSnippets(ids: ids)
                     },
                     onAddCurrent: {
                         let utf16 = currentProgressUTF16(blocks: blocks) ?? 0
@@ -181,20 +230,92 @@ struct ReaderView: View {
                 .environmentObject(store)
             }
         }
+        .sheet(isPresented: $showSnippetActions) {
+            NavigationStack {
+                ReaderSnippetActionSheet(
+                    selectedPreview: selectedPlainTextForRange(textSelection) ?? "",
+                    note: $snippetNoteDraft,
+                    onAddBookmark: {
+                        if let r = normalizedSelectionRange(textSelection) {
+                            store.addBookmark(
+                                documentId: document.id,
+                                utf16Offset: r.lowerBound,
+                                label: String((selectedPlainTextForRange(textSelection) ?? document.title).prefix(80))
+                            )
+                        }
+                        showSnippetActions = false
+                    },
+                    onSaveSnippet: {
+                        if let r = normalizedSelectionRange(textSelection),
+                           let excerpt = selectedPlainTextForRange(textSelection) {
+                            let note = snippetNoteDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                            store.addTextSnippet(
+                                documentId: document.id,
+                                utf16Start: r.lowerBound,
+                                utf16End: r.upperBound,
+                                excerpt: excerpt,
+                                note: note.isEmpty ? nil : note
+                            )
+                        }
+                        showSnippetActions = false
+                    },
+                    onCancel: { showSnippetActions = false }
+                )
+                .environmentObject(store)
+            }
+        }
+        .sheet(isPresented: $showReadingStats) {
+            NavigationStack {
+                ReaderReadingStatsSheet(
+                    title: document.title,
+                    seconds: store.readingSeconds(for: document.id)
+                )
+                .environmentObject(store)
+            }
+        }
+        .sheet(isPresented: $showExportShare, onDismiss: {
+            if let u = exportShareURL {
+                try? FileManager.default.removeItem(at: u)
+            }
+            exportShareURL = nil
+        }) {
+            if let url = exportShareURL {
+                ActivityShareSheet(items: [url])
+            }
+        }
+        .alert("导出", isPresented: Binding(
+            get: { exportError != nil },
+            set: { if !$0 { exportError = nil } }
+        )) {
+            Button("好", role: .cancel) { exportError = nil }
+        } message: {
+            Text(exportError ?? "")
+        }
         .onAppear {
             prepareContent()
             if presentsNavigationChrome {
                 store.recordLastOpenedDocument(documentId: document.id)
+                store.beginReadingSession(documentId: document.id)
             }
         }
         .onChange(of: presentsNavigationChrome) { _, chrome in
             if chrome {
                 store.recordLastOpenedDocument(documentId: document.id)
+                store.beginReadingSession(documentId: document.id)
             } else {
+                store.endReadingSession()
                 progressSaveTask?.cancel()
                 let b = displayBlocks
                 let utf16 = currentProgressUTF16(blocks: b) ?? store.progressUTF16Offset(for: document.id) ?? 0
                 store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard presentsNavigationChrome else { return }
+            if phase == .active {
+                store.beginReadingSession(documentId: document.id)
+            } else if phase == .background || phase == .inactive {
+                store.endReadingSession()
             }
         }
         .onChange(of: document.id) { _, _ in
@@ -205,9 +326,45 @@ struct ReaderView: View {
             prepareContent()
         }
         .onDisappear {
+            if presentsNavigationChrome {
+                store.endReadingSession()
+            }
             progressSaveTask?.cancel()
             let utf16 = currentProgressUTF16(blocks: blocks) ?? store.progressUTF16Offset(for: document.id) ?? 0
             store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
+        }
+    }
+
+    private func normalizedSelectionRange(_ range: NSRange) -> (lowerBound: Int, upperBound: Int)? {
+        let s = document.content
+        let n = (s as NSString).length
+        guard range.length > 0, range.location >= 0, range.location + range.length <= n else { return nil }
+        return (range.location, range.location + range.length)
+    }
+
+    private func selectedPlainTextForRange(_ range: NSRange) -> String? {
+        guard let r = normalizedSelectionRange(range) else { return nil }
+        let ns = document.content as NSString
+        return ns.substring(with: NSRange(location: r.lowerBound, length: r.upperBound - r.lowerBound))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func jumpToSnippetRange(utf16Start: Int, utf16End: Int, blocks: [MarkdownBlock]) {
+        let mid = (utf16Start + utf16End) / 2
+        jumpToUTF16(mid, blocks: blocks)
+    }
+
+    private func exportCurrentDocument() {
+        let name = document.title.replacingOccurrences(of: "/", with: "-")
+        let base = name.isEmpty ? "export" : name
+        let md = "# \(document.title)\n\n\(document.content)"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(base).md")
+        do {
+            try md.data(using: .utf8)?.write(to: url, options: .atomic)
+            exportShareURL = url
+            showExportShare = true
+        } catch {
+            exportError = "导出失败：\(error.localizedDescription)"
         }
     }
 
@@ -217,38 +374,22 @@ struct ReaderView: View {
             store.readingPreferences.backgroundColor
                 .ignoresSafeArea()
 
-            ScrollViewReader { proxy in
+            if selectionMode {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 14) {
-                        Color.clear
-                            .frame(height: 0)
-                            .background(
-                                GeometryReader { g in
-                                    Color.clear
-                                        .allowsHitTesting(false)
-                                        .preference(
-                                            key: ScrollContentMinYKey.self,
-                                            value: g.frame(in: .named(scrollSpaceName)).minY
-                                        )
-                                }
-                            )
-
-                        ForEach(blocks) { item in
-                            blockView(item)
-                                .id(item.id)
-                                .background(
-                                    GeometryReader { g in
-                                        Color.clear
-                                            .allowsHitTesting(false)
-                                            .preference(
-                                                key: BlockFramesKey.self,
-                                                value: [item.id: g.frame(in: .named(scrollSpaceName))]
-                                            )
-                                    }
-                                )
-                        }
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("拖动光标选择正文，再点工具栏「摘录」可加入书签或保存摘录与备注。")
+                            .font(.caption)
+                            .foregroundStyle(store.readingPreferences.secondaryTextColor)
+                            .padding(.horizontal, 4)
+                        ReaderSelectableContentView(
+                            fullText: document.content,
+                            textColor: UIColor(store.readingPreferences.textColor),
+                            font: UIFont.systemFont(ofSize: CGFloat(store.readingPreferences.fontSize)),
+                            selection: $textSelection
+                        )
+                        .frame(minHeight: max(viewportHeight * 0.85, 420))
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 12)
                 }
                 .background(
@@ -258,23 +399,69 @@ struct ReaderView: View {
                             .preference(key: ViewportHeightKey.self, value: geo.size.height)
                     }
                 )
-                .coordinateSpace(name: scrollSpaceName)
-                .onPreferenceChange(ScrollContentMinYKey.self) { scrollContentMinY = $0 }
-                .onPreferenceChange(BlockFramesKey.self) { blockFrames = $0 }
                 .onPreferenceChange(ViewportHeightKey.self) { h in
                     if h > 1 { viewportHeight = h }
                 }
-                .onChange(of: scrollContentMinY) { _, _ in scheduleProgressSave(blocks: blocks) }
-                .onChange(of: blockFrames) { _, _ in scheduleProgressSave(blocks: blocks) }
-                .onAppear {
-                    restoreScrollIfNeeded(proxy: proxy, blocks: blocks)
-                }
-                .onChange(of: scrollToBlockId) { _, id in
-                    guard let id else { return }
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(id, anchor: .top)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 14) {
+                            Color.clear
+                                .frame(height: 0)
+                                .background(
+                                    GeometryReader { g in
+                                        Color.clear
+                                            .allowsHitTesting(false)
+                                            .preference(
+                                                key: ScrollContentMinYKey.self,
+                                                value: g.frame(in: .named(scrollSpaceName)).minY
+                                            )
+                                    }
+                                )
+
+                            ForEach(blocks) { item in
+                                blockView(item)
+                                    .id(item.id)
+                                    .background(
+                                        GeometryReader { g in
+                                            Color.clear
+                                                .allowsHitTesting(false)
+                                                .preference(
+                                                    key: BlockFramesKey.self,
+                                                    value: [item.id: g.frame(in: .named(scrollSpaceName))]
+                                                )
+                                        }
+                                    )
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
                     }
-                    scrollToBlockId = nil
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear
+                                .allowsHitTesting(false)
+                                .preference(key: ViewportHeightKey.self, value: geo.size.height)
+                        }
+                    )
+                    .coordinateSpace(name: scrollSpaceName)
+                    .onPreferenceChange(ScrollContentMinYKey.self) { scrollContentMinY = $0 }
+                    .onPreferenceChange(BlockFramesKey.self) { blockFrames = $0 }
+                    .onPreferenceChange(ViewportHeightKey.self) { h in
+                        if h > 1 { viewportHeight = h }
+                    }
+                    .onChange(of: scrollContentMinY) { _, _ in scheduleProgressSave(blocks: blocks) }
+                    .onChange(of: blockFrames) { _, _ in scheduleProgressSave(blocks: blocks) }
+                    .onAppear {
+                        restoreScrollIfNeeded(proxy: proxy, blocks: blocks)
+                    }
+                    .onChange(of: scrollToBlockId) { _, id in
+                        guard let id else { return }
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            proxy.scrollTo(id, anchor: .top)
+                        }
+                        scrollToBlockId = nil
+                    }
                 }
             }
         }
@@ -675,12 +862,16 @@ private struct ReaderSearchSheet: View {
     }
 }
 
-// MARK: - Bookmarks sheet
+// MARK: - Bookmarks & snippets sheet
 
 private struct ReaderBookmarksSheet: View {
     let bookmarks: [BookmarkEntry]
-    var onJump: (Int) -> Void
-    var onRemove: ([UUID]) -> Void
+    let snippets: [TextSnippetEntry]
+    let readingSeconds: Int
+    var onJumpBookmark: (Int) -> Void
+    var onJumpSnippet: (Int, Int) -> Void
+    var onRemoveBookmarks: ([UUID]) -> Void
+    var onRemoveSnippets: ([UUID]) -> Void
     var onAddCurrent: () -> Void
 
     @EnvironmentObject private var store: DocumentStore
@@ -689,31 +880,76 @@ private struct ReaderBookmarksSheet: View {
     var body: some View {
         List {
             Section {
+                LabeledContent("本篇阅读时长") {
+                    Text(DocumentStore.formatReadingDuration(seconds: readingSeconds))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section {
                 Button("在当前位置添加书签") {
                     onAddCurrent()
                 }
             }
-            if bookmarks.isEmpty {
-                Text("暂无书签")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(bookmarks) { bm in
-                    Button {
-                        onJump(bm.utf16Offset)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(bm.label)
-                                .font(.headline)
-                            Text(readerBookmarkDateString(bm.createdAt))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+
+            Section("书签") {
+                if bookmarks.isEmpty {
+                    Text("暂无书签")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(bookmarks) { bm in
+                        Button {
+                            onJumpBookmark(bm.utf16Offset)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(bm.label)
+                                    .font(.headline)
+                                Text(readerBookmarkDateString(bm.createdAt))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                onRemoveBookmarks([bm.id])
+                            } label: {
+                                Text("删除")
+                            }
                         }
                     }
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            onRemove([bm.id])
+                }
+            }
+
+            Section("摘录与备注") {
+                if snippets.isEmpty {
+                    Text("在「划选」模式下长按选择正文，点「摘录」可保存。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(snippets) { sn in
+                        Button {
+                            onJumpSnippet(sn.utf16Start, sn.utf16End)
                         } label: {
-                            Text("删除")
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(sn.excerpt)
+                                    .font(.subheadline)
+                                    .lineLimit(4)
+                                if let n = sn.note, !n.isEmpty {
+                                    Text("备注：\(n)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text(readerBookmarkDateString(sn.createdAt))
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                onRemoveSnippets([sn.id])
+                            } label: {
+                                Text("删除")
+                            }
                         }
                     }
                 }
@@ -722,7 +958,92 @@ private struct ReaderBookmarksSheet: View {
         .scrollContentBackground(.hidden)
         .background(store.readingPreferences.backgroundColor)
         .listRowBackground(store.readingPreferences.listRowBackgroundColor)
-        .navigationTitle("书签")
+        .navigationTitle("书签与摘录")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("完成") { dismiss() }
+            }
+        }
+    }
+}
+
+// MARK: - Snippet actions
+
+private struct ReaderSnippetActionSheet: View {
+    let selectedPreview: String
+    @Binding var note: String
+    var onAddBookmark: () -> Void
+    var onSaveSnippet: () -> Void
+    var onCancel: () -> Void
+
+    @EnvironmentObject private var store: DocumentStore
+
+    var body: some View {
+        Form {
+            Section("已选文字") {
+                Text(selectedPreview.isEmpty ? "（无）" : selectedPreview)
+                    .font(.subheadline)
+            }
+            Section("备注（可选，随摘录保存）") {
+                TextField("写一句备注…", text: $note, axis: .vertical)
+                    .lineLimit(3...8)
+            }
+            Section {
+                Button("加入书签（定位到选区开头）") {
+                    onAddBookmark()
+                }
+                Button("保存为摘录") {
+                    onSaveSnippet()
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(store.readingPreferences.backgroundColor)
+        .navigationTitle("摘录")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("取消") { onCancel() }
+            }
+        }
+    }
+}
+
+// MARK: - Reading stats
+
+private struct ReaderReadingStatsSheet: View {
+    let title: String
+    let seconds: Int
+
+    @EnvironmentObject private var store: DocumentStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            Section {
+                LabeledContent("篇目") {
+                    Text(title)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("累计阅读") {
+                    Text(DocumentStore.formatReadingDuration(seconds: seconds))
+                }
+            }
+            Section {
+                Text("计时在离开本篇或切换到其他篇目时累计；应用进入后台也会结算。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(store.readingPreferences.backgroundColor)
+        .listRowBackground(store.readingPreferences.listRowBackgroundColor)
+        .navigationTitle("阅读统计")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)

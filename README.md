@@ -35,6 +35,9 @@
    - **阅读进度**：按当前可见段落自动保存（UTF-16 偏移），再次打开时恢复位置
    - 一键朗读/停止朗读（`AVSpeechSynthesizer`）
    - **VoiceOver**：诗词正文每一行段落有独立 **无障碍标签**（朗读为纯文本，去掉 `**` 等标记）
+   - **导出**：工具栏「导出」将当前篇生成为临时 `.md` 并通过系统分享表保存或分享
+   - **阅读统计**：工具栏「统计」或「书签与摘录」页顶显示本篇 **累计阅读时长**（离开本篇、切换分页、进后台时累计）
+   - **划选摘录**：点「划选」进入可选中文本视图；选中后点「摘录」可 **加入书签**（定位到选区开头）或 **保存摘录与备注**；在「书签与摘录」中查看、跳转、删除
    - 阅读设置（字号、行距、主题、备份）
 
 3. **导入功能**
@@ -62,6 +65,7 @@ MaozedongReader/
     DocumentCategory.swift
     BookmarkEntry.swift
     ReaderStateSnapshot.swift
+    TextSnippetEntry.swift
     ReadingPreferences.swift
   Services/
     BundledPoetryImporter.swift
@@ -76,6 +80,7 @@ MaozedongReader/
   Views/
     LibraryView.swift
     ReaderView.swift
+    ReaderSelectableContentView.swift
     SettingsPanel.swift
 ```
 

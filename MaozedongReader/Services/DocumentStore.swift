@@ -13,6 +13,10 @@ final class DocumentStore: ObservableObject {
 
     private var readerStateDiskTask: Task<Void, Never>?
 
+    /// Active document for reading-time accumulation (only one reader page counts at a time).
+    private var activeReadingDocumentId: UUID?
+    private var activeReadingStartedAt: Date?
+
     private let fileManager = FileManager.default
     private let documentsMetadataFileName = "documents.json"
     private let readingPreferencesFileName = "reading_preferences.json"
@@ -217,6 +221,8 @@ final class DocumentStore: ObservableObject {
         for doc in removed {
             next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
             next.bookmarks.removeAll { $0.documentId == doc.id }
+            next.textSnippets.removeAll { $0.documentId == doc.id }
+            next.readingSecondsByDocumentId.removeValue(forKey: doc.id)
             if next.lastOpenedDocumentId == doc.id {
                 next.lastOpenedDocumentId = nil
                 next.lastOpenedAt = nil
@@ -238,6 +244,8 @@ final class DocumentStore: ObservableObject {
         var next = readerState
         next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
         next.bookmarks.removeAll { $0.documentId == doc.id }
+        next.textSnippets.removeAll { $0.documentId == doc.id }
+        next.readingSecondsByDocumentId.removeValue(forKey: doc.id)
         if next.lastOpenedDocumentId == doc.id {
             next.lastOpenedDocumentId = nil
             next.lastOpenedAt = nil
@@ -339,6 +347,76 @@ final class DocumentStore: ObservableObject {
     func bookmarks(for documentId: UUID) -> [BookmarkEntry] {
         readerState.bookmarks.filter { $0.documentId == documentId }
             .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func textSnippets(for documentId: UUID) -> [TextSnippetEntry] {
+        readerState.textSnippets.filter { $0.documentId == documentId }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func addTextSnippet(documentId: UUID, utf16Start: Int, utf16End: Int, excerpt: String, note: String?) {
+        guard !isPreviewMode else { return }
+        let s = max(0, utf16Start)
+        let e = max(s, utf16End)
+        let trimmed = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let entry = TextSnippetEntry(
+            documentId: documentId,
+            utf16Start: s,
+            utf16End: e,
+            excerpt: String(trimmed.prefix(500)),
+            note: note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : String($0.prefix(2000)) }
+        )
+        var next = readerState
+        next.textSnippets.insert(entry, at: 0)
+        readerState = next
+        saveReaderState()
+    }
+
+    func removeTextSnippets(ids: [UUID]) {
+        guard !isPreviewMode else { return }
+        let idSet = Set(ids)
+        var next = readerState
+        next.textSnippets.removeAll { idSet.contains($0.id) }
+        readerState = next
+        saveReaderState()
+    }
+
+    /// Call when a reader page becomes the visible pager page (or returns from background).
+    func beginReadingSession(documentId: UUID) {
+        guard !isPreviewMode else { return }
+        if activeReadingDocumentId == documentId { return }
+        endReadingSession()
+        activeReadingDocumentId = documentId
+        activeReadingStartedAt = Date()
+    }
+
+    /// Flush elapsed time into `readingSecondsByDocumentId`.
+    func endReadingSession() {
+        guard !isPreviewMode else { return }
+        guard let id = activeReadingDocumentId, let start = activeReadingStartedAt else { return }
+        let secs = max(0, Int(Date().timeIntervalSince(start)))
+        activeReadingDocumentId = nil
+        activeReadingStartedAt = nil
+        guard secs > 0 else { return }
+        var next = readerState
+        next.readingSecondsByDocumentId[id, default: 0] += secs
+        readerState = next
+        saveReaderState()
+    }
+
+    func readingSeconds(for documentId: UUID) -> Int {
+        readerState.readingSecondsByDocumentId[documentId] ?? 0
+    }
+
+    static func formatReadingDuration(seconds: Int) -> String {
+        guard seconds > 0 else { return "尚未计时" }
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        let s = seconds % 60
+        if h > 0 { return String(format: "%d小时%d分", h, m) }
+        if m > 0 { return String(format: "%d分%d秒", m, s) }
+        return String(format: "%d秒", s)
     }
 
     private func saveReadingPreferences() {
