@@ -17,7 +17,7 @@ private enum LibrarySearchChrome {
 
     static func hairlineSeparator(for prefs: ReadingPreferences) -> Color {
         let alpha: CGFloat = prefs.theme == .dark ? 0.32 : 0.2
-        Color(UIColor.separator.withAlphaComponent(alpha))
+        return Color(UIColor.separator.withAlphaComponent(alpha))
     }
 }
 
