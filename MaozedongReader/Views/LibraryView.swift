@@ -21,6 +21,7 @@ struct LibraryView: View {
     @State private var anthologySectionExpanded = true
     @State private var collapsedAnthologyMajors: Set<Int> = []
     @State private var collapsedAnthologySubsections: Set<String> = []
+    @State private var showLibrarySettings = false
 
     private var filteredDocuments: [DocumentItem] {
         let q = libraryQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -173,15 +174,9 @@ struct LibraryView: View {
         .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
         .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink {
-                        SettingsPanel(preferences: $store.readingPreferences)
-                            .environmentObject(store)
-                            .scrollContentBackground(.hidden)
-                            .background(store.readingPreferences.backgroundColor)
-                            .navigationTitle("阅读设置")
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
-                            .toolbarBackground(.visible, for: .navigationBar)
+                    // Sheet avoids NavigationLink + `.searchable` (UISearchController) fighting for bar taps on some iOS versions.
+                    Button {
+                        showLibrarySettings = true
                     } label: {
                         Text("设置")
                             .font(.body)
@@ -201,6 +196,23 @@ struct LibraryView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                }
+            }
+            .sheet(isPresented: $showLibrarySettings) {
+                NavigationStack {
+                    SettingsPanel(preferences: $store.readingPreferences, flushPreferencesOnDismiss: true)
+                        .environmentObject(store)
+                        .scrollContentBackground(.hidden)
+                        .background(store.readingPreferences.backgroundColor)
+                        .navigationTitle("阅读设置")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("完成") { showLibrarySettings = false }
+                            }
+                        }
                 }
             }
             .fileImporter(

@@ -5,13 +5,18 @@ final class DocumentStore: ObservableObject {
     @Published var documents: [DocumentItem] = []
     @Published var readingPreferences: ReadingPreferences = .default {
         didSet {
-            saveReadingPreferences()
+            if readingPreferencesPersistenceDepth == 0 {
+                scheduleReadingPreferencesDiskWrite()
+            }
         }
     }
     @Published private(set) var readerState: ReaderStateSnapshot = .empty
     @Published var errorMessage: String?
 
     private var readerStateDiskTask: Task<Void, Never>?
+    private var readingPreferencesDiskTask: Task<Void, Never>?
+    /// Skip persisting when assigning preferences loaded from disk (avoid rewrite-on-launch).
+    private var readingPreferencesPersistenceDepth = 0
 
     private let fileManager = FileManager.default
     private let documentsMetadataFileName = "documents.json"
@@ -39,7 +44,9 @@ final class DocumentStore: ObservableObject {
         self.isPreviewMode = previewMode
         guard !previewMode else {
             documents = DocumentItem.previewItems
-            readingPreferences = .default
+            withoutReadingPreferencesPersistence {
+                readingPreferences = .default
+            }
             readerState = .empty
             return
         }
@@ -308,19 +315,43 @@ final class DocumentStore: ObservableObject {
         let payload = try dec.decode(BackupPayload.self, from: data)
         documents = payload.documents.sorted(by: DocumentItem.displaySort)
         readerState = payload.readerState
-        readingPreferences = payload.readingPreferences
+        withoutReadingPreferencesPersistence {
+            readingPreferences = payload.readingPreferences
+        }
         try saveDocuments()
         saveReaderState()
-        saveReadingPreferences()
+        persistReadingPreferencesToDiskNow()
     }
 
     func progressUTF16Offset(for documentId: UUID) -> Int? {
         readerState.progressUTF16ByDocumentId[documentId]
     }
 
-    private func saveReadingPreferences() {
-        guard !isPreviewMode else { return }
+    /// Call when closing a settings UI so the last slider tick is not still pending in the debounce window.
+    func flushReadingPreferencesToDisk() {
+        persistReadingPreferencesToDiskNow()
+    }
 
+    private func withoutReadingPreferencesPersistence(_ work: () -> Void) {
+        readingPreferencesPersistenceDepth += 1
+        work()
+        readingPreferencesPersistenceDepth -= 1
+    }
+
+    private func scheduleReadingPreferencesDiskWrite() {
+        guard !isPreviewMode else { return }
+        readingPreferencesDiskTask?.cancel()
+        readingPreferencesDiskTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 550_000_000)
+            guard !Task.isCancelled else { return }
+            persistReadingPreferencesToDiskNow()
+        }
+    }
+
+    private func persistReadingPreferencesToDiskNow() {
+        readingPreferencesDiskTask?.cancel()
+        readingPreferencesDiskTask = nil
+        guard !isPreviewMode else { return }
         do {
             let data = try JSONEncoder().encode(readingPreferences)
             try data.write(to: readingPreferencesURL, options: .atomic)
@@ -378,14 +409,21 @@ final class DocumentStore: ObservableObject {
 
     private func loadReadingPreferences() {
         guard fileManager.fileExists(atPath: readingPreferencesURL.path) else {
-            readingPreferences = .default
+            withoutReadingPreferencesPersistence {
+                readingPreferences = .default
+            }
             return
         }
         do {
             let data = try Data(contentsOf: readingPreferencesURL)
-            readingPreferences = try JSONDecoder().decode(ReadingPreferences.self, from: data)
+            let decoded = try JSONDecoder().decode(ReadingPreferences.self, from: data)
+            withoutReadingPreferencesPersistence {
+                readingPreferences = decoded
+            }
         } catch {
-            readingPreferences = .default
+            withoutReadingPreferencesPersistence {
+                readingPreferences = .default
+            }
             errorMessage = "读取阅读设置失败：\(error.localizedDescription)"
         }
     }

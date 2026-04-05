@@ -106,7 +106,7 @@ struct ReaderView: View {
             }
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
-                SettingsPanel(preferences: $store.readingPreferences)
+                SettingsPanel(preferences: $store.readingPreferences, flushPreferencesOnDismiss: true)
                     .environmentObject(store)
                     .scrollContentBackground(.hidden)
                     .background(store.readingPreferences.backgroundColor)

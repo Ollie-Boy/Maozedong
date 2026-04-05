@@ -4,7 +4,8 @@ import UniformTypeIdentifiers
 struct SettingsPanel: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var preferences: ReadingPreferences
-    var onSave: (() -> Void)?
+    /// When true, any pending debounced preferences write is flushed when this view disappears (e.g. sheet dismissed).
+    var flushPreferencesOnDismiss: Bool = false
 
     @State private var showExportShare = false
     @State private var exportShareURL: URL?
@@ -97,8 +98,10 @@ struct SettingsPanel: View {
         } message: {
             Text(backupAlert ?? "")
         }
-        .onChange(of: preferences) { _, _ in
-            onSave?()
+        .onDisappear {
+            if flushPreferencesOnDismiss {
+                store.flushReadingPreferencesToDisk()
+            }
         }
     }
 }
