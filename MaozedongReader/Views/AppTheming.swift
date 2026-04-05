@@ -11,15 +11,8 @@ extension ReadingPreferences.Theme {
 }
 
 extension ReadingPreferences {
-    /// Slightly distinct from page background for grouped list rows.
+    /// Match page background so grouped list rows do not show as bright white cards (esp. newer iOS).
     var listRowBackgroundColor: Color {
-        switch theme {
-        case .light:
-            return Color(white: 0.99)
-        case .dark:
-            return Color(white: 0.11)
-        case .sepia:
-            return Color(red: 0.99, green: 0.96, blue: 0.90)
-        }
+        backgroundColor
     }
 }

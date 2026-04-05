@@ -101,8 +101,7 @@ struct ReaderView: View {
                 }
             }
         }
-        .navigationTitle(usesExternalNavigationTitle ? "" : document.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .modifier(ReaderBarTitleModifier(title: document.title, useToolbarPrincipal: usesExternalNavigationTitle))
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
@@ -478,6 +477,33 @@ struct ReaderView: View {
         case let .bullet(items): return String((items.first ?? "").prefix(48))
         case let .ordered(items): return String((items.first ?? "").prefix(48))
         case .horizontalRule: return "分隔线"
+        }
+    }
+}
+
+/// Avoids empty `navigationTitle` on iOS 18+ (placeholder bar / flicker); pager uses toolbar principal title.
+private struct ReaderBarTitleModifier: ViewModifier {
+    let title: String
+    let useToolbarPrincipal: Bool
+    @EnvironmentObject private var store: DocumentStore
+
+    func body(content: Content) -> some View {
+        if useToolbarPrincipal {
+            content
+                .navigationTitle(" ")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text(title)
+                            .font(.headline)
+                            .foregroundStyle(store.readingPreferences.textColor)
+                            .lineLimit(1)
+                    }
+                }
+        } else {
+            content
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

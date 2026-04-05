@@ -106,7 +106,7 @@ struct LibraryView: View {
                                 isExpanded: $poetrySectionExpanded,
                                 items: sortedInCategory(.poetry)
                             ) { doc in
-                                documentRow(doc)
+                                documentRow(doc, labelLeadingInset: 0)
                             }
 
                             let anth = sortedInCategory(.anthology)
@@ -138,7 +138,7 @@ struct LibraryView: View {
                             }
                         } else {
                             ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
-                                documentRow(doc)
+                                documentRow(doc, labelLeadingInset: 0)
                             }
                         }
                     }
@@ -146,11 +146,12 @@ struct LibraryView: View {
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .listRowBackground(store.readingPreferences.listRowBackgroundColor)
+                    .listSectionSpacing(.compact)
                 }
                 }
         }
         .navigationTitle("毛泽东著作")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
@@ -215,7 +216,7 @@ struct LibraryView: View {
             if !majorCollapsed {
                 if major.subsections.count == 1, let only = major.subsections.first {
                     ForEach(only.items) { doc in
-                        documentRow(doc)
+                        documentRow(doc, labelLeadingInset: 0)
                     }
                 } else {
                     ForEach(major.subsections) { sub in
@@ -224,7 +225,7 @@ struct LibraryView: View {
                         Section {
                             if !subCollapsed {
                                 ForEach(sub.items) { doc in
-                                    documentRow(doc)
+                                    documentRow(doc, labelLeadingInset: 22)
                                 }
                             }
                         } header: {
@@ -246,6 +247,7 @@ struct LibraryView: View {
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
+                                .padding(.leading, 14)
                                 .textCase(nil)
                             }
                             .buttonStyle(.plain)
@@ -279,19 +281,21 @@ struct LibraryView: View {
     }
 
     @ViewBuilder
-    private func documentRow(_ doc: DocumentItem) -> some View {
+    private func documentRow(_ doc: DocumentItem, labelLeadingInset: CGFloat = 0) -> some View {
         Group {
             if doc.category == .poetry {
                 NavigationLink {
                     PoetryReaderPager(allDocuments: store.documents, initial: doc)
                 } label: {
                     rowLabel(doc)
+                        .padding(.leading, labelLeadingInset)
                 }
             } else {
                 NavigationLink {
                     AnthologyReaderPager(allDocuments: store.documents, initial: doc)
                 } label: {
                     rowLabel(doc)
+                        .padding(.leading, labelLeadingInset)
                 }
             }
         }

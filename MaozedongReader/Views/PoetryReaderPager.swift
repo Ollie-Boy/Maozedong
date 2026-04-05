@@ -33,8 +33,6 @@ struct PoetryReaderPager: View {
             }
         }
         .background(store.readingPreferences.backgroundColor.ignoresSafeArea())
-        .navigationTitle(currentTitle)
-        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)

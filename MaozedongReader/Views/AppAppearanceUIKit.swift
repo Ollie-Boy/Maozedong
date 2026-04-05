@@ -37,6 +37,14 @@ enum AppAppearanceUIKit {
 
         UITableView.appearance().backgroundColor = .clear
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
+
+        // Grouped List / section chrome: avoid default white header/footer and cell backing on newer iOS.
+        let rowUICol = uiBackground(for: theme)
+        UITableViewCell.appearance().backgroundColor = rowUICol
+        let clearHeaderFooter = UIBackgroundConfiguration.clear()
+        UITableViewHeaderFooterView.appearance().backgroundConfiguration = clearHeaderFooter
+
+        UICollectionView.appearance().backgroundColor = .clear
     }
 
     static func syncTabBar(with theme: ReadingPreferences.Theme) {
