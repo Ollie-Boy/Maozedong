@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// Horizontal paging between anthology items in the same **library display order** as poetry:
+/// all 选集篇目可左右滑动切换（不再限制在同一卷内 `##` 分组）。
 struct AnthologyReaderPager: View {
     @EnvironmentObject private var store: DocumentStore
 
@@ -8,9 +10,8 @@ struct AnthologyReaderPager: View {
     var onRequestPop: (() -> Void)?
 
     init(allDocuments: [DocumentItem], initial: DocumentItem, onRequestPop: (() -> Void)? = nil) {
-        let key = initial.anthologyScrollGroupKey
         ordered = allDocuments
-            .filter { $0.category == .anthology && $0.anthologyScrollGroupKey == key }
+            .filter { $0.category == .anthology }
             .sorted(by: DocumentItem.displaySort)
         _selectionId = State(initialValue: initial.id)
         self.onRequestPop = onRequestPop
