@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One article at a time: avoids `LazyHStack` of full `ReaderView`s (each holds a huge `content` string + parsed blocks),
-/// which caused memory growth and freezes. Swipe horizontally to change the active document.
+/// Lazy horizontal paging: only the selected `ReaderView` registers navigation chrome (toolbar/title),
+/// avoiding stacked `TabView` pages fighting the navigation bar during transitions.
 struct HorizontalReaderPager: View {
     let documents: [DocumentItem]
     @Binding var selectionId: UUID
@@ -11,51 +11,35 @@ struct HorizontalReaderPager: View {
 
     var body: some View {
         Group {
-            if let doc = resolvedDocument {
-                ReaderView(document: doc)
-                    .id(doc.id)
-                    .contentShape(Rectangle())
-                    .simultaneousGesture(horizontalPageSwipeGesture)
-                    .onAppear {
-                        if !orderedIds.contains(selectionId), let f = orderedIds.first {
-                            selectionId = f
+            if documents.isEmpty {
+                Color.clear
+            } else {
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: 0) {
+                        ForEach(documents) { doc in
+                            ReaderView(document: doc, presentsNavigationChrome: doc.id == selectionId)
+                                .containerRelativeFrame(.horizontal)
                         }
                     }
-            } else {
-                Color.clear
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(
+                    id: Binding(
+                        get: { selectionId },
+                        set: { newId in
+                            if let newId { selectionId = newId }
+                        }
+                    )
+                )
+                .modifier(PagerBoundaryPopModifier(orderedIds: orderedIds, selection: $selectionId, onPop: {
+                    if let onRequestPop {
+                        onRequestPop()
+                    } else {
+                        dismiss()
+                    }
+                }))
             }
         }
-    }
-
-    private var resolvedDocument: DocumentItem? {
-        if let d = documents.first(where: { $0.id == selectionId }) { return d }
-        guard let first = orderedIds.first else { return nil }
-        return documents.first(where: { $0.id == first })
-    }
-
-    private var horizontalPageSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 40, coordinateSpace: .local)
-            .onEnded { value in
-                let t = value.translation
-                guard abs(t.width) > abs(t.height) * 1.12 else { return }
-                guard let idx = orderedIds.firstIndex(of: selectionId) else { return }
-                let lastIdx = orderedIds.count - 1
-
-                if t.width > 60, idx > 0 {
-                    selectionId = orderedIds[idx - 1]
-                    return
-                }
-                if t.width < -60 {
-                    if idx < lastIdx {
-                        selectionId = orderedIds[idx + 1]
-                    } else if value.startLocation.x > 160, t.width < -72 {
-                        if let onRequestPop {
-                            onRequestPop()
-                        } else {
-                            dismiss()
-                        }
-                    }
-                }
-            }
     }
 }
