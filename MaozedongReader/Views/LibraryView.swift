@@ -16,9 +16,7 @@ struct LibraryView: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var path: NavigationPath
     @State private var showImporter = false
-    @State private var libraryQueryRaw = ""
     @State private var libraryQuery = ""
-    @State private var librarySearchDebounceTask: Task<Void, Never>?
     @State private var categoryFilter: DocumentCategory?
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
@@ -85,45 +83,6 @@ struct LibraryView: View {
         "\(majorId)|\(subId)"
     }
 
-    /// First bottom floating search style (commit 5c071e6): rounded rect + ultraThinMaterial.
-    private var libraryFloatingSearchBar: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .font(.body.weight(.medium))
-                .foregroundStyle(store.readingPreferences.secondaryTextColor)
-            TextField("搜索标题与全文", text: $libraryQueryRaw)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled(true)
-                .foregroundStyle(store.readingPreferences.textColor)
-            if !libraryQueryRaw.isEmpty {
-                Button {
-                    libraryQueryRaw = ""
-                    libraryQuery = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.body)
-                        .foregroundStyle(store.readingPreferences.secondaryTextColor)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("清除搜索")
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(store.readingPreferences.textColor.opacity(0.12), lineWidth: 1)
-        }
-        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 6)
-        .padding(.horizontal, 16)
-        .padding(.top, 6)
-        .padding(.bottom, 10)
-    }
-
     var body: some View {
         ZStack {
                 store.readingPreferences.backgroundColor.ignoresSafeArea()
@@ -134,26 +93,14 @@ struct LibraryView: View {
                         systemImage: "book.closed",
                         description: Text("点击右上角“导入”来添加 txt 或 md 文件。")
                     )
+                } else if filteredDocuments.isEmpty {
+                    ContentUnavailableView(
+                        "无匹配结果",
+                        systemImage: "magnifyingglass",
+                        description: Text("试试其他关键词或清除分组筛选。")
+                    )
                 } else {
                     List {
-                            if filteredDocuments.isEmpty {
-                                Section {
-                                    VStack(spacing: 10) {
-                                        Image(systemName: "magnifyingglass")
-                                            .font(.title2)
-                                            .foregroundStyle(.secondary)
-                                        Text("无匹配结果")
-                                            .font(.headline)
-                                        Text("试试其他关键词或清除分组筛选。")
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                            .multilineTextAlignment(.center)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 20)
-                                }
-                                .listRowBackground(store.readingPreferences.listRowBackgroundColor)
-                            } else {
                                 if let cont = store.continueReadingDocument {
                                     Section {
                                         Button {
@@ -215,16 +162,12 @@ struct LibraryView: View {
                                         documentRow(doc, labelLeadingInset: 0)
                                     }
                                 }
-                            }
                     }
                     .listStyle(.insetGrouped)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .listRowBackground(store.readingPreferences.listRowBackgroundColor)
                     .listSectionSpacing(.compact)
-                    .safeAreaInset(edge: .bottom, spacing: 0) {
-                        libraryFloatingSearchBar
-                    }
                 }
                 }
         }
@@ -232,19 +175,7 @@ struct LibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .onChange(of: libraryQueryRaw) { _, raw in
-            librarySearchDebounceTask?.cancel()
-            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty {
-                libraryQuery = ""
-                return
-            }
-            librarySearchDebounceTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 220_000_000)
-                guard !Task.isCancelled else { return }
-                libraryQuery = raw
-            }
-        }
+        .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
         .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
