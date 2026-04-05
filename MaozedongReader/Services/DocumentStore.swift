@@ -72,7 +72,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledAnthologyVersionKey = "bundledAnthologyCorpusVersion"
-    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v2-toc"
+    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v3-merged-vol2"
 
     private func mergeBundledAnthologyIfNeeded() {
         guard !isPreviewMode else { return }
@@ -111,7 +111,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledPoetryVersionKey = "bundledPoetryCorpusVersion"
-    private static let bundledPoetryVersion = "v4"
+    private static let bundledPoetryVersion = "v5-corpus-fix"
 
     private func normalizeDocumentsAfterLoad() {
         guard !isPreviewMode else { return }

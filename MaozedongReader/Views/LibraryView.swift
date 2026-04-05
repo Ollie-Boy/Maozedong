@@ -1,9 +1,15 @@
 import SwiftUI
 
-private struct AnthologySectionBucket: Identifiable {
+private struct AnthologyMinorBucket: Identifiable {
     let id: String
     let title: String
     let items: [DocumentItem]
+}
+
+private struct AnthologyMajorGroup: Identifiable {
+    let id: Int
+    let title: String
+    let subsections: [AnthologyMinorBucket]
 }
 
 struct LibraryView: View {
@@ -13,6 +19,7 @@ struct LibraryView: View {
     @State private var categoryFilter: DocumentCategory?
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
+    @State private var collapsedAnthologyMajors: Set<Int> = []
     @State private var collapsedAnthologySubsections: Set<String> = []
 
     private var filteredDocuments: [DocumentItem] {
@@ -29,39 +36,50 @@ struct LibraryView: View {
         filteredDocuments.filter { $0.category == cat }.sorted(by: DocumentItem.displaySort)
     }
 
-    private func anthologyBuckets(from items: [DocumentItem]) -> [AnthologySectionBucket] {
+    private func anthologyMajorGroups(from items: [DocumentItem]) -> [AnthologyMajorGroup] {
+        let sorted = items.sorted(by: DocumentItem.displaySort)
+        var byMajor: [Int: [DocumentItem]] = [:]
+        var majorKeys: [Int] = []
+        for doc in sorted {
+            let m = doc.anthologyMajorOrder ?? 99
+            if byMajor[m] == nil {
+                majorKeys.append(m)
+                byMajor[m] = []
+            }
+            byMajor[m]?.append(doc)
+        }
+        return majorKeys.map { m in
+            let docs = byMajor[m] ?? []
+            let title = docs.first.flatMap { $0.anthologyMajorTitle }?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let majorTitle = (title?.isEmpty == false) ? title! : (m == 99 ? "其他选集" : "选集")
+            return AnthologyMajorGroup(id: m, title: majorTitle, subsections: anthologyMinorBuckets(from: docs))
+        }
+    }
+
+    private func anthologyMinorBuckets(from items: [DocumentItem]) -> [AnthologyMinorBucket] {
         let sorted = items.sorted(by: DocumentItem.displaySort)
         var dict: [String: [DocumentItem]] = [:]
         var order: [String] = []
-
         for doc in sorted {
-            let key: String
-            if let m = doc.anthologyMajorOrder, let s = doc.anthologySubOrder {
-                key = "\(m)-\(s)"
-            } else if let t = doc.anthologySectionTitle, !t.isEmpty {
-                key = "t:\(t)"
-            } else {
-                key = "other"
-            }
+            let sub = doc.anthologySubOrder ?? 0
+            let sec = doc.anthologySectionTitle ?? ""
+            let key = "\(sub)|\(sec)"
             if dict[key] == nil {
                 order.append(key)
                 dict[key] = []
             }
             dict[key]?.append(doc)
         }
-
         return order.compactMap { k in
             guard let arr = dict[k], !arr.isEmpty else { return nil }
-            let title: String
-            if k == "other" {
-                title = "其他选集"
-            } else if let first = arr.first?.anthologySectionTitle, !first.isEmpty {
-                title = first
-            } else {
-                title = "选集"
-            }
-            return AnthologySectionBucket(id: k, title: title, items: arr)
+            let subTitle = arr.first?.anthologySectionTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let display = (subTitle?.isEmpty == false) ? subTitle! : "篇目"
+            return AnthologyMinorBucket(id: k, title: display, items: arr)
         }
+    }
+
+    private func subsectionCollapseKey(majorId: Int, subId: String) -> String {
+        "\(majorId)|\(subId)"
     }
 
     var body: some View {
@@ -94,11 +112,8 @@ struct LibraryView: View {
                             if !anth.isEmpty {
                                 Section {
                                     if anthologySectionExpanded {
-                                        ForEach(anthologyBuckets(from: anth)) { bucket in
-                                            anthologySubsection(
-                                                bucket: bucket,
-                                                isCollapsed: collapsedAnthologySubsections.contains(bucket.id)
-                                            )
+                                        ForEach(anthologyMajorGroups(from: anth)) { major in
+                                            anthologyMajorSection(major: major)
                                         }
                                     }
                                 } header: {
@@ -181,30 +196,67 @@ struct LibraryView: View {
     }
 
     @ViewBuilder
-    private func anthologySubsection(bucket: AnthologySectionBucket, isCollapsed: Bool) -> some View {
+    private func anthologyMajorSection(major: AnthologyMajorGroup) -> some View {
+        let majorCollapsed = collapsedAnthologyMajors.contains(major.id)
         Section {
-            if !isCollapsed {
-                ForEach(bucket.items) { doc in
-                    documentRow(doc)
+            if !majorCollapsed {
+                if major.subsections.count == 1, let only = major.subsections.first {
+                    ForEach(only.items) { doc in
+                        documentRow(doc)
+                    }
+                } else {
+                    ForEach(major.subsections) { sub in
+                        let subKey = subsectionCollapseKey(majorId: major.id, subId: sub.id)
+                        let subCollapsed = collapsedAnthologySubsections.contains(subKey)
+                        Section {
+                            if !subCollapsed {
+                                ForEach(sub.items) { doc in
+                                    documentRow(doc)
+                                }
+                            }
+                        } header: {
+                            Button {
+                                if subCollapsed {
+                                    collapsedAnthologySubsections.remove(subKey)
+                                } else {
+                                    collapsedAnthologySubsections.insert(subKey)
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: subCollapsed ? "chevron.right" : "chevron.down")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                    Text(sub.title)
+                                        .font(.subheadline.weight(.medium))
+                                    Spacer()
+                                    Text("\(sub.items.count)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .textCase(nil)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
         } header: {
             Button {
-                if isCollapsed {
-                    collapsedAnthologySubsections.remove(bucket.id)
+                if majorCollapsed {
+                    collapsedAnthologyMajors.remove(major.id)
                 } else {
-                    collapsedAnthologySubsections.insert(bucket.id)
+                    collapsedAnthologyMajors.insert(major.id)
                 }
             } label: {
                 HStack {
-                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                        .font(.caption2.weight(.semibold))
+                    Image(systemName: majorCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    Text(bucket.title)
-                        .font(.subheadline.weight(.medium))
+                    Text(major.title)
+                        .font(.subheadline.weight(.semibold))
                     Spacer()
-                    Text("\(bucket.items.count)")
-                        .font(.caption2)
+                    Text("\(major.subsections.reduce(0) { $0 + $1.items.count })")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 .textCase(nil)

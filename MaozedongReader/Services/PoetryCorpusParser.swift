@@ -84,39 +84,62 @@ enum PoetryCorpusParser {
     }
 
     private static func buildMarkdown(title: String, main: String, note: String?) -> String {
-        let mainMd = main
+        let strippedMain = stripLeadingTitleLineIfDuplicate(title: title, body: main)
+        let mainMd = strippedMain
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { String($0).trimmingCharacters(in: .whitespaces) }
             .joined(separator: "  \n")
 
         guard let note, !note.isEmpty else {
-            return """
-            # \(title)
-
-            ## 正文
-
-            \(mainMd)
-            """
+            return mainMd
         }
 
-        let noteMd = note
+        let citationLine = annotationCitationLine(from: note) ?? note
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { String($0).trimmingCharacters(in: .whitespaces) }
-            .joined(separator: "  \n")
+            .first(where: { !$0.isEmpty }) ?? ""
+
+        guard !citationLine.isEmpty else {
+            return mainMd
+        }
 
         return """
-        # \(title)
-
-        ## 正文
-
         \(mainMd)
 
         ---
 
-        ## 注释
+        **注释**
 
-        \(noteMd)
+        \(citationLine)
         """
+    }
+
+    /// Removes a first line that repeats the poem title (plain or Markdown bold).
+    private static func stripLeadingTitleLineIfDuplicate(title: String, body: String) -> String {
+        var lines = body.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard let first = lines.first?.trimmingCharacters(in: .whitespaces), !first.isEmpty else {
+            return body
+        }
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidates: [String] = [
+            normalizedTitle,
+            "**\(normalizedTitle)**",
+            "# \(normalizedTitle)",
+            "## \(normalizedTitle)"
+        ]
+        if candidates.contains(where: { $0 == first }) {
+            lines.removeFirst()
+            return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return body
+    }
+
+    /// Keeps only the first non-empty line of the annotation block (出版来源等)，去掉其后解读性正文。
+    private static func annotationCitationLine(from note: String) -> String? {
+        let lines = note.split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+        guard let first = lines.first(where: { !$0.isEmpty }) else { return nil }
+        return first
     }
 
     private static func dropFirstLine(_ s: String) -> String {

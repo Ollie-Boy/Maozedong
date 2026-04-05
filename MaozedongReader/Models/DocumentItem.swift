@@ -12,8 +12,10 @@ struct DocumentItem: Identifiable, Codable, Hashable {
     var sortEpochDay: Int?
     /// Original corpus sequence number (1…n) when from bundled poetry; tie-breaker when dates match.
     var sortCorpusIndex: Int?
-    /// 《毛泽东选集》式分卷/分期标题（来自 `AnthologyTOC.md`）。
+    /// 《毛泽东选集》式分卷/分期标题（来自 `AnthologyTOC.md`）；无 `##` 小节时与卷名相同。
     var anthologySectionTitle: String?
+    /// 卷级标题（`#` 行），书库一级分组用。
+    var anthologyMajorTitle: String?
     var anthologyMajorOrder: Int?
     var anthologySubOrder: Int?
     let createdAt: Date
@@ -22,7 +24,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, title, content, sourceFileName, category
         case sortEpochYear, sortEpochMonth, sortEpochDay, sortCorpusIndex
-        case anthologySectionTitle, anthologyMajorOrder, anthologySubOrder
+        case anthologySectionTitle, anthologyMajorTitle, anthologyMajorOrder, anthologySubOrder
         case createdAt, updatedAt
     }
 
@@ -37,6 +39,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         sortEpochDay: Int? = nil,
         sortCorpusIndex: Int? = nil,
         anthologySectionTitle: String? = nil,
+        anthologyMajorTitle: String? = nil,
         anthologyMajorOrder: Int? = nil,
         anthologySubOrder: Int? = nil,
         createdAt: Date = Date(),
@@ -52,6 +55,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         self.sortEpochDay = sortEpochDay
         self.sortCorpusIndex = sortCorpusIndex
         self.anthologySectionTitle = anthologySectionTitle
+        self.anthologyMajorTitle = anthologyMajorTitle
         self.anthologyMajorOrder = anthologyMajorOrder
         self.anthologySubOrder = anthologySubOrder
         self.createdAt = createdAt
@@ -69,6 +73,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         sortEpochDay = try c.decodeIfPresent(Int.self, forKey: .sortEpochDay)
         sortCorpusIndex = try c.decodeIfPresent(Int.self, forKey: .sortCorpusIndex)
         anthologySectionTitle = try c.decodeIfPresent(String.self, forKey: .anthologySectionTitle)
+        anthologyMajorTitle = try c.decodeIfPresent(String.self, forKey: .anthologyMajorTitle)
         anthologyMajorOrder = try c.decodeIfPresent(Int.self, forKey: .anthologyMajorOrder)
         anthologySubOrder = try c.decodeIfPresent(Int.self, forKey: .anthologySubOrder)
 

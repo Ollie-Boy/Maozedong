@@ -3,7 +3,10 @@ import Foundation
 /// Parses `Resources/AnthologyTOC.md` (same structure as upstream `目录.md`).
 enum AnthologyTocParser {
     struct Entry {
+        /// 二级分组标题（`##` 小节名）；无小节时与 `majorTitle` 相同。
         let sectionTitle: String
+        /// 卷级标题（`#` 行），用于书库一级分组。
+        let majorTitle: String
         let majorOrder: Int
         let subOrder: Int
     }
@@ -61,11 +64,16 @@ enum AnthologyTocParser {
                 sectionTitle = currentMajor
                 subOrd = 0
             } else {
-                sectionTitle = "\(currentMajor) · \(currentSub)"
+                sectionTitle = currentSub
                 subOrd = subOrderCounter
             }
 
-            result[fileName] = Entry(sectionTitle: sectionTitle, majorOrder: majorOrder, subOrder: subOrd)
+            result[fileName] = Entry(
+                sectionTitle: sectionTitle,
+                majorTitle: currentMajor,
+                majorOrder: majorOrder,
+                subOrder: subOrd
+            )
         }
 
         return result

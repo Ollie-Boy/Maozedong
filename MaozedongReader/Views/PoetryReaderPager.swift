@@ -29,10 +29,12 @@ struct PoetryReaderPager: View {
                             .tag(doc.id)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .automatic))
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
         .navigationTitle(currentTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 }

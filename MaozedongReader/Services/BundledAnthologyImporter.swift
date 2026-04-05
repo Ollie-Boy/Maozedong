@@ -34,6 +34,7 @@ enum BundledAnthologyImporter {
                     category: .anthology,
                     sortCorpusIndex: seq,
                     anthologySectionTitle: te?.sectionTitle,
+                    anthologyMajorTitle: te?.majorTitle,
                     anthologyMajorOrder: te.map { $0.majorOrder },
                     anthologySubOrder: te.map { $0.subOrder }
                 )

@@ -103,6 +103,8 @@ struct ReaderView: View {
         }
         .navigationTitle(usesExternalNavigationTitle ? "" : document.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {

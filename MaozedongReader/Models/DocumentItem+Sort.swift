@@ -28,6 +28,9 @@ extension DocumentItem {
             let asub = a.anthologySubOrder ?? 0
             let bsub = b.anthologySubOrder ?? 0
             if asub != bsub { return asub < bsub }
+            let asec = a.anthologySectionTitle ?? ""
+            let bsec = b.anthologySectionTitle ?? ""
+            if asec != bsec { return asec.localizedStandardCompare(bsec) == .orderedAscending }
             let ai = a.sortCorpusIndex ?? 99_999
             let bi = b.sortCorpusIndex ?? 99_999
             if ai != bi { return ai < bi }
