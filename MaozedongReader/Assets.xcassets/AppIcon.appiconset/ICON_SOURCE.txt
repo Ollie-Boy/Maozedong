@@ -1,5 +1,15 @@
-App icon (1024×1024) generated offline by:
-  python3 scripts/generate_handdrawn_icon.py
+App icon (1024×1024): red seal 「毛」 cropped from the calligraphy GIF:
 
-Stylized mid-century poster look (warm paper, vermilion ring, ink silhouette, gold accent).
-Replace AppIcon.png with your own artwork if you prefer a different likeness or license.
+  http://59.46.86.120:9002/shici/pic/shici/qinyuanchunxue.gif
+
+Regenerate (after downloading the GIF locally):
+
+  python3 scripts/generate_ma_seal_app_icon.py /path/to/qinyuanchunxue.gif
+
+Or:
+
+  python3 scripts/generate_ma_seal_app_icon.py --url "http://59.46.86.120:9002/shici/pic/shici/qinyuanchunxue.gif"
+
+Note: The GIF is palette-based; the script maps palette indices to RGB (plain
+Image.convert("RGB") can drop the red seal). Default crop box targets the large
+bottom-left seal in this file.
