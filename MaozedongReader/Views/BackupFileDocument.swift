@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct BackupFileDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.json] }
+    static var writableContentTypes: [UTType] { [.json] }
 
     var data: Data
 

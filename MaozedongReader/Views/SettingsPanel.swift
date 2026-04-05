@@ -61,8 +61,8 @@ struct SettingsPanel: View {
         .fileExporter(
             isPresented: $showExport,
             document: $exportDocument,
-            contentType: .json,
-            defaultFilename: "MaozedongReader-backup"
+            contentType: BackupFileDocument.self,
+            defaultFilename: "MaozedongReader-backup.json"
         ) { _ in
             exportDocument = nil
         }
