@@ -72,7 +72,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledAnthologyVersionKey = "bundledAnthologyCorpusVersion"
-    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v3-merged-vol2"
+    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v4-vol-split"
 
     private func mergeBundledAnthologyIfNeeded() {
         guard !isPreviewMode else { return }
@@ -111,7 +111,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledPoetryVersionKey = "bundledPoetryCorpusVersion"
-    private static let bundledPoetryVersion = "v6-poetry-md-layout"
+    private static let bundledPoetryVersion = "v7-poetry-no-zhengwen-heading"
 
     private func normalizeDocumentsAfterLoad() {
         guard !isPreviewMode else { return }
@@ -260,13 +260,6 @@ final class DocumentStore: ObservableObject {
         next.progressUTF16ByDocumentId[documentId] = max(0, utf16Offset)
         readerState = next
         saveReaderState()
-    }
-
-    /// Marks a document as opened so the library can show「已读」even before scroll metrics fire.
-    func markDocumentOpened(documentId: UUID) {
-        guard !isPreviewMode else { return }
-        if readerState.progressUTF16ByDocumentId[documentId] != nil { return }
-        setReadingProgress(documentId: documentId, utf16Offset: 0)
     }
 
     func progressUTF16Offset(for documentId: UUID) -> Int? {

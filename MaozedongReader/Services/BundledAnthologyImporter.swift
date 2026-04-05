@@ -20,6 +20,7 @@ enum BundledAnthologyImporter {
         for url in sorted {
             let name = url.lastPathComponent
             if name == "目录.md" { continue }
+            if name.caseInsensitiveCompare("SUMMARY.md") == .orderedSame { continue }
 
             guard let data = try? Data(contentsOf: url) else { continue }
             guard let text = decodeText(data: data), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }

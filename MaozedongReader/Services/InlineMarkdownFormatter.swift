@@ -10,14 +10,14 @@ enum InlineMarkdownFormatter {
     ) -> AttributedString {
         var result = AttributedString()
         var i = line.startIndex
-        let font = Font.system(size: baseFontSize)
-        let boldFont = Font.system(size: baseFontSize, weight: .semibold)
+        let plainFont = ReaderTypography.bodyFont(size: baseFontSize)
+        let boldFont = ReaderTypography.boldFont(size: baseFontSize)
         let codeFont = Font.system(size: baseFontSize * 0.92, design: .monospaced)
 
         func appendPlain(_ substr: Substring) {
             guard !substr.isEmpty else { return }
             var chunk = AttributedString(String(substr))
-            chunk.font = font
+            chunk.font = plainFont
             chunk.foregroundColor = textColor
             result.append(chunk)
         }

@@ -39,11 +39,5 @@ struct AnthologyReaderPager: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
         .toolbarBackground(.visible, for: .bottomBar)
-        .onAppear {
-            store.markDocumentOpened(documentId: selectionId)
-        }
-        .onChange(of: selectionId) { _, id in
-            store.markDocumentOpened(documentId: id)
-        }
     }
 }

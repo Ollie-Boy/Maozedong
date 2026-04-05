@@ -51,7 +51,7 @@ struct LibraryView: View {
         return majorKeys.map { m in
             let docs = byMajor[m] ?? []
             let title = docs.first.flatMap { $0.anthologyMajorTitle }?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let majorTitle = (title?.isEmpty == false) ? title! : (m == 99 ? "其他选集" : "选集")
+            let majorTitle = (title?.isEmpty == false) ? title! : (m == 99 ? "选集篇目" : "选集")
             return AnthologyMajorGroup(id: m, title: majorTitle, subsections: anthologyMinorBuckets(from: docs))
         }
     }
@@ -83,8 +83,7 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 store.readingPreferences.backgroundColor.ignoresSafeArea()
                 Group {
                 if store.documents.isEmpty {
@@ -149,12 +148,13 @@ struct LibraryView: View {
                     .listRowBackground(store.readingPreferences.listRowBackgroundColor)
                 }
                 }
-            }
-            .navigationTitle("毛泽东著作")
-            .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
-            .toolbar {
+        }
+        .navigationTitle("毛泽东著作")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
+        .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Picker("分组", selection: $categoryFilter) {
@@ -206,7 +206,6 @@ struct LibraryView: View {
             }, message: {
                 Text(store.errorMessage ?? "")
             })
-        }
     }
 
     @ViewBuilder
@@ -381,6 +380,8 @@ private struct CollapsibleLibrarySection<Row: View>: View {
 }
 
 #Preview {
-    LibraryView()
-        .environmentObject(DocumentStore(previewMode: true))
+    NavigationStack {
+        LibraryView()
+    }
+    .environmentObject(DocumentStore(previewMode: true))
 }

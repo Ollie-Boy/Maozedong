@@ -93,8 +93,6 @@ enum PoetryCorpusParser {
             return """
             # \(title)
 
-            ## 正文
-
             \(mainMd)
             """
         }
@@ -108,16 +106,12 @@ enum PoetryCorpusParser {
             return """
             # \(title)
 
-            ## 正文
-
             \(mainMd)
             """
         }
 
         return """
         # \(title)
-
-        ## 正文
 
         \(mainMd)
 

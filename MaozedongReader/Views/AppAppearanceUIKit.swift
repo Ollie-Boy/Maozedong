@@ -1,22 +1,66 @@
 import SwiftUI
 import UIKit
 
-/// Opaque `UITabBar` behind SwiftUI `TabView` page style so the home-indicator area matches the theme.
+/// Global UIKit chrome so navigation, search bars, and TabView footers match the reading theme.
 enum AppAppearanceUIKit {
-    static func syncTabBar(with theme: ReadingPreferences.Theme) {
-        let bg: UIColor
+    static func syncGlobalChrome(theme: ReadingPreferences.Theme) {
+        syncTabBar(theme: theme)
+        let bg = uiBackground(for: theme)
+        let label: UIColor = (theme == .dark) ? .white : .black
+
+        let nav = UINavigationBarAppearance()
+        nav.configureWithOpaqueBackground()
+        nav.backgroundColor = bg
+        nav.titleTextAttributes = [.foregroundColor: label]
+        nav.largeTitleTextAttributes = [.foregroundColor: label]
+
+        let navBar = UINavigationBar.appearance()
+        navBar.standardAppearance = nav
+        navBar.scrollEdgeAppearance = nav
+        navBar.compactAppearance = nav
+        navBar.compactScrollEdgeAppearance = nav
+        navBar.tintColor = label
+
+        UISearchBar.appearance().tintColor = label
+        UISearchBar.appearance().barTintColor = bg
+
+        let fieldBg: UIColor
         switch theme {
         case .light:
-            bg = .systemBackground
+            fieldBg = UIColor(white: 0.94, alpha: 1)
         case .dark:
-            bg = .black
+            fieldBg = UIColor(white: 0.18, alpha: 1)
         case .sepia:
-            bg = UIColor(red: 0.96, green: 0.93, blue: 0.86, alpha: 1)
+            fieldBg = UIColor(red: 0.93, green: 0.89, blue: 0.80, alpha: 1)
         }
+        UISearchTextField.appearance(whenContainedInInstancesOf: [UISearchBar.self]).backgroundColor = fieldBg
+
+        UITableView.appearance().backgroundColor = .clear
+        UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
+    }
+
+    static func syncTabBar(with theme: ReadingPreferences.Theme) {
+        syncTabBar(theme: theme)
+    }
+
+    private static func syncTabBar(theme: ReadingPreferences.Theme) {
+        let bg = uiBackground(for: theme)
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = bg
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
+        let tab = UITabBar.appearance()
+        tab.standardAppearance = appearance
+        tab.scrollEdgeAppearance = appearance
+    }
+
+    private static func uiBackground(for theme: ReadingPreferences.Theme) -> UIColor {
+        switch theme {
+        case .light:
+            return .systemBackground
+        case .dark:
+            return .black
+        case .sepia:
+            return UIColor(red: 0.96, green: 0.93, blue: 0.86, alpha: 1)
+        }
     }
 }

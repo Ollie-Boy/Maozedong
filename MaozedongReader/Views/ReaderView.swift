@@ -232,7 +232,6 @@ struct ReaderView: View {
             }
         }
         .onAppear {
-            store.markDocumentOpened(documentId: document.id)
             prepareContent()
         }
         .onChange(of: document.id) { _, _ in
@@ -289,7 +288,7 @@ struct ReaderView: View {
         switch block.kind {
         case let .heading(level, text):
             Text(text)
-                .font(.system(size: headingSize(level: level, base: baseSize), weight: .bold))
+                .font(ReaderTypography.bodyFont(size: headingSize(level: level, base: baseSize), weight: .bold))
                 .foregroundStyle(textColor)
                 .padding(.top, level <= 2 ? 8 : 4)
 
@@ -351,7 +350,7 @@ struct ReaderView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("\(idx + 1).")
                             .foregroundStyle(secondary)
-                            .font(.system(size: CGFloat(baseSize), weight: .medium, design: .rounded))
+                            .font(ReaderTypography.bodyFont(size: baseSize, weight: .medium))
                         Text(InlineMarkdownFormatter.attributedLine(
                             item,
                             baseFontSize: CGFloat(baseSize),
@@ -372,10 +371,10 @@ struct ReaderView: View {
 
     private func headingSize(level: Int, base: Double) -> Double {
         switch level {
-        case 1: return min(base + 10, 34)
-        case 2: return min(base + 6, 30)
-        case 3: return min(base + 3, 26)
-        default: return min(base + 1, 24)
+        case 1: return min(base + 8, 32)
+        case 2: return min(base + 4, 28)
+        case 3: return min(base + 2, 25)
+        default: return min(base + 1, 23)
         }
     }
 

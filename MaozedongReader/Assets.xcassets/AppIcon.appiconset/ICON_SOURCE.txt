@@ -1,0 +1,5 @@
+App icon derived from Wikimedia Commons public-domain file:
+  https://commons.wikimedia.org/wiki/File:Mao_Zedong_1919.jpg
+  Direct image: https://upload.wikimedia.org/wikipedia/commons/5/58/Mao_Zedong_1919.jpg
+
+Cropped to upper portion and scaled to 1024×1024 for iOS. Verify licensing before App Store distribution.
