@@ -16,7 +16,9 @@ struct LibraryView: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var path: NavigationPath
     @State private var showImporter = false
+    @State private var libraryQueryRaw = ""
     @State private var libraryQuery = ""
+    @State private var librarySearchDebounceTask: Task<Void, Never>?
     @State private var categoryFilter: DocumentCategory?
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
@@ -175,7 +177,20 @@ struct LibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .searchable(text: $libraryQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索标题与全文")
+        .searchable(text: $libraryQueryRaw, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索标题与全文")
+        .onChange(of: libraryQueryRaw) { _, raw in
+            librarySearchDebounceTask?.cancel()
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                libraryQuery = ""
+                return
+            }
+            librarySearchDebounceTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 220_000_000)
+                guard !Task.isCancelled else { return }
+                libraryQuery = raw
+            }
+        }
         .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {

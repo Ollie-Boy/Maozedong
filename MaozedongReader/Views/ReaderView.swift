@@ -26,6 +26,8 @@ struct ReaderView: View {
     @StateObject private var speechService = SpeechService()
 
     let document: DocumentItem
+    /// When false (e.g. horizontal pager siblings), do not register nav items so only the active page owns the navigation bar.
+    var presentsNavigationChrome: Bool = true
     @State private var showingSettings = false
     @State private var showingTOC = false
     @State private var showingSearch = false
@@ -50,117 +52,59 @@ struct ReaderView: View {
         let blocks = displayBlocks
         let headings = tocEntries(from: blocks)
 
-        ZStack {
-            store.readingPreferences.backgroundColor
-                .ignoresSafeArea()
+        Group {
+            if presentsNavigationChrome {
+                readerScrollRoot(blocks: blocks)
+                    .navigationTitle(document.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+                    .toolbarBackground(.visible, for: .navigationBar)
+                    .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
+                    .toolbarBackground(.visible, for: .bottomBar)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .topBarTrailing) {
+                            Button {
+                                showingTOC = true
+                            } label: {
+                                Label("目录", systemImage: "list.bullet")
+                            }
+                            .disabled(headings.isEmpty)
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 14) {
-                        Color.clear
-                            .frame(height: 0)
-                            .background(
-                                GeometryReader { g in
-                                    Color.clear
-                                        .allowsHitTesting(false)
-                                        .preference(
-                                            key: ScrollContentMinYKey.self,
-                                            value: g.frame(in: .named(scrollSpaceName)).minY
-                                        )
+                            Button {
+                                searchQuery = ""
+                                showingSearch = true
+                            } label: {
+                                Label("搜索", systemImage: "magnifyingglass")
+                            }
+
+                            Button {
+                                showingBookmarks = true
+                            } label: {
+                                Label("书签", systemImage: "bookmark")
+                            }
+
+                            Button {
+                                if speechService.isSpeaking {
+                                    speechService.stop()
+                                } else {
+                                    speechService.speak(speechPlainText)
                                 }
-                            )
-
-                        ForEach(blocks) { item in
-                            blockView(item)
-                                .id(item.id)
-                                .background(
-                                    GeometryReader { g in
-                                        Color.clear
-                                            .allowsHitTesting(false)
-                                            .preference(
-                                                key: BlockFramesKey.self,
-                                                value: [item.id: g.frame(in: .named(scrollSpaceName))]
-                                            )
-                                    }
+                            } label: {
+                                Label(
+                                    speechService.isSpeaking ? "停止朗读" : "朗读",
+                                    systemImage: speechService.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
                                 )
+                            }
+
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Label("阅读设置", systemImage: "textformat.size")
+                            }
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
-                }
-                .background(
-                    GeometryReader { geo in
-                        Color.clear
-                            .allowsHitTesting(false)
-                            .preference(key: ViewportHeightKey.self, value: geo.size.height)
-                    }
-                )
-                .coordinateSpace(name: scrollSpaceName)
-                .onPreferenceChange(ScrollContentMinYKey.self) { scrollContentMinY = $0 }
-                .onPreferenceChange(BlockFramesKey.self) { blockFrames = $0 }
-                .onPreferenceChange(ViewportHeightKey.self) { h in
-                    if h > 1 { viewportHeight = h }
-                }
-                .onChange(of: scrollContentMinY) { _, _ in scheduleProgressSave(blocks: blocks) }
-                .onChange(of: blockFrames) { _, _ in scheduleProgressSave(blocks: blocks) }
-                .onAppear {
-                    restoreScrollIfNeeded(proxy: proxy, blocks: blocks)
-                }
-                .onChange(of: scrollToBlockId) { _, id in
-                    guard let id else { return }
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(id, anchor: .top)
-                    }
-                    scrollToBlockId = nil
-                }
-            }
-        }
-        .navigationTitle(document.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
-        .toolbarBackground(.visible, for: .bottomBar)
-        .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    showingTOC = true
-                } label: {
-                    Label("目录", systemImage: "list.bullet")
-                }
-                .disabled(headings.isEmpty)
-
-                Button {
-                    searchQuery = ""
-                    showingSearch = true
-                } label: {
-                    Label("搜索", systemImage: "magnifyingglass")
-                }
-
-                Button {
-                    showingBookmarks = true
-                } label: {
-                    Label("书签", systemImage: "bookmark")
-                }
-
-                Button {
-                    if speechService.isSpeaking {
-                        speechService.stop()
-                    } else {
-                        speechService.speak(speechPlainText)
-                    }
-                } label: {
-                    Label(
-                        speechService.isSpeaking ? "停止朗读" : "朗读",
-                        systemImage: speechService.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
-                    )
-                }
-
-                Button {
-                    showingSettings = true
-                } label: {
-                    Label("阅读设置", systemImage: "textformat.size")
-                }
+            } else {
+                readerScrollRoot(blocks: blocks)
             }
         }
         .sheet(isPresented: $showingSettings) {
@@ -244,7 +188,19 @@ struct ReaderView: View {
         }
         .onAppear {
             prepareContent()
-            store.recordLastOpenedDocument(documentId: document.id)
+            if presentsNavigationChrome {
+                store.recordLastOpenedDocument(documentId: document.id)
+            }
+        }
+        .onChange(of: presentsNavigationChrome) { _, chrome in
+            if chrome {
+                store.recordLastOpenedDocument(documentId: document.id)
+            } else {
+                progressSaveTask?.cancel()
+                let b = displayBlocks
+                let utf16 = currentProgressUTF16(blocks: b) ?? store.progressUTF16Offset(for: document.id) ?? 0
+                store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
+            }
         }
         .onChange(of: document.id) { _, _ in
             expandedNoteBlockIds = []
@@ -257,6 +213,75 @@ struct ReaderView: View {
             progressSaveTask?.cancel()
             let utf16 = currentProgressUTF16(blocks: blocks) ?? store.progressUTF16Offset(for: document.id) ?? 0
             store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
+        }
+    }
+
+    @ViewBuilder
+    private func readerScrollRoot(blocks: [MarkdownBlock]) -> some View {
+        ZStack {
+            store.readingPreferences.backgroundColor
+                .ignoresSafeArea()
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 14) {
+                        Color.clear
+                            .frame(height: 0)
+                            .background(
+                                GeometryReader { g in
+                                    Color.clear
+                                        .allowsHitTesting(false)
+                                        .preference(
+                                            key: ScrollContentMinYKey.self,
+                                            value: g.frame(in: .named(scrollSpaceName)).minY
+                                        )
+                                }
+                            )
+
+                        ForEach(blocks) { item in
+                            blockView(item)
+                                .id(item.id)
+                                .background(
+                                    GeometryReader { g in
+                                        Color.clear
+                                            .allowsHitTesting(false)
+                                            .preference(
+                                                key: BlockFramesKey.self,
+                                                value: [item.id: g.frame(in: .named(scrollSpaceName))]
+                                            )
+                                    }
+                                )
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                }
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .allowsHitTesting(false)
+                            .preference(key: ViewportHeightKey.self, value: geo.size.height)
+                    }
+                )
+                .coordinateSpace(name: scrollSpaceName)
+                .onPreferenceChange(ScrollContentMinYKey.self) { scrollContentMinY = $0 }
+                .onPreferenceChange(BlockFramesKey.self) { blockFrames = $0 }
+                .onPreferenceChange(ViewportHeightKey.self) { h in
+                    if h > 1 { viewportHeight = h }
+                }
+                .onChange(of: scrollContentMinY) { _, _ in scheduleProgressSave(blocks: blocks) }
+                .onChange(of: blockFrames) { _, _ in scheduleProgressSave(blocks: blocks) }
+                .onAppear {
+                    restoreScrollIfNeeded(proxy: proxy, blocks: blocks)
+                }
+                .onChange(of: scrollToBlockId) { _, id in
+                    guard let id else { return }
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(id, anchor: .top)
+                    }
+                    scrollToBlockId = nil
+                }
+            }
         }
     }
 

@@ -3,7 +3,6 @@ import SwiftUI
 /// Horizontal paging between poetry items in chronological (display) order.
 struct PoetryReaderPager: View {
     @EnvironmentObject private var store: DocumentStore
-    @Environment(\.dismiss) private var dismiss
 
     private let orderedPoems: [DocumentItem]
     @State private var selectionId: UUID
@@ -26,20 +25,12 @@ struct PoetryReaderPager: View {
             if orderedPoems.count <= 1, let only = orderedPoems.first {
                 ReaderView(document: only)
             } else {
-                TabView(selection: $selectionId) {
-                    ForEach(orderedPoems) { doc in
-                        ReaderView(document: doc)
-                            .tag(doc.id)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .modifier(PagerBoundaryPopModifier(orderedIds: ids, selection: $selectionId, onPop: {
-                    if let onRequestPop {
-                        onRequestPop()
-                    } else {
-                        dismiss()
-                    }
-                }))
+                HorizontalReaderPager(
+                    documents: orderedPoems,
+                    selectionId: $selectionId,
+                    orderedIds: ids,
+                    onRequestPop: onRequestPop
+                )
             }
         }
         .background(store.readingPreferences.backgroundColor.ignoresSafeArea())

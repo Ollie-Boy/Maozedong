@@ -14,6 +14,8 @@ enum AppAppearanceUIKit {
         nav.backgroundColor = bg
         nav.titleTextAttributes = [.foregroundColor: label]
         nav.largeTitleTextAttributes = [.foregroundColor: label]
+        nav.shadowColor = .clear
+        nav.shadowImage = UIImage()
 
         let navBar = UINavigationBar.appearance()
         navBar.standardAppearance = nav
@@ -21,6 +23,7 @@ enum AppAppearanceUIKit {
         navBar.compactAppearance = nav
         navBar.compactScrollEdgeAppearance = nav
         navBar.tintColor = label
+        navBar.shadowImage = UIImage()
 
         UISearchBar.appearance().tintColor = label
         UISearchBar.appearance().barTintColor = bg

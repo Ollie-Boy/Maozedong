@@ -11,6 +11,8 @@ final class DocumentStore: ObservableObject {
     @Published private(set) var readerState: ReaderStateSnapshot = .empty
     @Published var errorMessage: String?
 
+    private var readerStateDiskTask: Task<Void, Never>?
+
     private let fileManager = FileManager.default
     private let documentsMetadataFileName = "documents.json"
     private let readingPreferencesFileName = "reading_preferences.json"
@@ -269,7 +271,7 @@ final class DocumentStore: ObservableObject {
         var next = readerState
         next.progressUTF16ByDocumentId[documentId] = max(0, utf16Offset)
         readerState = next
-        saveReaderState()
+        scheduleReaderStateDiskWrite()
     }
 
     func recordLastOpenedDocument(documentId: UUID) {
@@ -278,7 +280,7 @@ final class DocumentStore: ObservableObject {
         next.lastOpenedDocumentId = documentId
         next.lastOpenedAt = Date()
         readerState = next
-        saveReaderState()
+        scheduleReaderStateDiskWrite()
     }
 
     var continueReadingDocument: DocumentItem? {
@@ -353,7 +355,20 @@ final class DocumentStore: ObservableObject {
         }
     }
 
+    /// Batches rapid progress / “last opened” updates so scrolling and pager switches do not sync JSON on every event.
+    private func scheduleReaderStateDiskWrite() {
+        guard !isPreviewMode else { return }
+        readerStateDiskTask?.cancel()
+        readerStateDiskTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            guard !Task.isCancelled else { return }
+            saveReaderState()
+        }
+    }
+
     private func saveReaderState() {
+        readerStateDiskTask?.cancel()
+        readerStateDiskTask = nil
         guard !isPreviewMode else { return }
         do {
             let data = try JSONEncoder().encode(readerState)

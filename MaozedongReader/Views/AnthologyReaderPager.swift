@@ -2,7 +2,6 @@ import SwiftUI
 
 struct AnthologyReaderPager: View {
     @EnvironmentObject private var store: DocumentStore
-    @Environment(\.dismiss) private var dismiss
 
     private let ordered: [DocumentItem]
     @State private var selectionId: UUID
@@ -26,20 +25,12 @@ struct AnthologyReaderPager: View {
             if ordered.count <= 1, let only = ordered.first {
                 ReaderView(document: only)
             } else {
-                TabView(selection: $selectionId) {
-                    ForEach(ordered) { doc in
-                        ReaderView(document: doc)
-                            .tag(doc.id)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .modifier(PagerBoundaryPopModifier(orderedIds: ids, selection: $selectionId, onPop: {
-                    if let onRequestPop {
-                        onRequestPop()
-                    } else {
-                        dismiss()
-                    }
-                }))
+                HorizontalReaderPager(
+                    documents: ordered,
+                    selectionId: $selectionId,
+                    orderedIds: ids,
+                    onRequestPop: onRequestPop
+                )
             }
         }
         .background(store.readingPreferences.backgroundColor.ignoresSafeArea())
