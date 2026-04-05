@@ -9,6 +9,7 @@ enum LeadLayoutNormalizer {
         let rawLines = mainRaw.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         var lines = rawLines.map { $0.trimmingCharacters(in: .whitespaces) }
         while lines.first?.isEmpty == true { lines.removeFirst() }
+        mergeSplitYearRangeMeta(into: &lines)
         guard let first = lines.first, !first.isEmpty else {
             return (nil, mainRaw.trimmingCharacters(in: .whitespacesAndNewlines))
         }
@@ -25,6 +26,27 @@ enum LeadLayoutNormalizer {
         }
 
         return (nil, mainRaw.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Corpus sometimes splits a range across lines, e.g. `1945年` then `至1946年` then body — merge into one meta line.
+    private static func mergeSplitYearRangeMeta(into lines: inout [String]) {
+        let yearOnly = #"^\d{4}\s*年\s*$"#
+        let toYearOnly = #"^(?:至|到)\s*\d{4}\s*年\s*$"#
+        while lines.count >= 3,
+              let a = lines.first,
+              a.range(of: yearOnly, options: .regularExpression) != nil,
+              lines[1].isEmpty,
+              lines[2].range(of: toYearOnly, options: .regularExpression) != nil {
+            lines.remove(at: 1)
+        }
+        guard lines.count >= 2 else { return }
+        let a = lines[0]
+        let b = lines[1]
+        guard !a.isEmpty, !b.isEmpty else { return }
+        guard a.range(of: yearOnly, options: .regularExpression) != nil,
+              b.range(of: toYearOnly, options: .regularExpression) != nil else { return }
+        lines[0] = a + b
+        lines.remove(at: 1)
     }
 
     private static func joinBodyLines(firstPoemFragment: String, restLines: [String]) -> String {

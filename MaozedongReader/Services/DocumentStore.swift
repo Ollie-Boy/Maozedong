@@ -122,7 +122,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledPoetryVersionKey = "bundledPoetryCorpusVersion"
-    private static let bundledPoetryVersion = "v10-poetry-note-strip"
+    private static let bundledPoetryVersion = "v11-poetry-date-range-merge"
 
     private func normalizeDocumentsAfterLoad() {
         guard !isPreviewMode else { return }
