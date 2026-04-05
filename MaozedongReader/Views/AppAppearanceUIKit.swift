@@ -41,9 +41,9 @@ enum AppAppearanceUIKit {
         UITableView.appearance().backgroundColor = .clear
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
 
-        // Plain list cells: match reading background (avoids white “cards” on newer iOS).
+        // Grouped list cells: tint to match reading theme.
         let rowUICol = uiBackground(for: theme)
-        var cellBg = UIBackgroundConfiguration.listPlainCell()
+        var cellBg = UIBackgroundConfiguration.listGroupedCell()
         cellBg.backgroundColor = rowUICol
         UITableViewCell.appearance().backgroundConfiguration = cellBg
 
