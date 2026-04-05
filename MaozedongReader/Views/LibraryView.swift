@@ -17,7 +17,6 @@ struct LibraryView: View {
     @Binding var path: NavigationPath
     @State private var showImporter = false
     @State private var libraryQuery = ""
-    @State private var categoryFilter: DocumentCategory?
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
     @State private var collapsedAnthologyMajors: Set<Int> = []
@@ -26,7 +25,6 @@ struct LibraryView: View {
     private var filteredDocuments: [DocumentItem] {
         let q = libraryQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         return store.documents.filter { doc in
-            if let f = categoryFilter, doc.category != f { return false }
             guard !q.isEmpty else { return true }
             if doc.title.localizedCaseInsensitiveContains(q) { return true }
             return doc.content.localizedCaseInsensitiveContains(q)
@@ -97,7 +95,7 @@ struct LibraryView: View {
                     ContentUnavailableView(
                         "无匹配结果",
                         systemImage: "magnifyingglass",
-                        description: Text("试试其他关键词或清除分组筛选。")
+                        description: Text("试试其他关键词。")
                     )
                 } else {
                     List {
@@ -121,45 +119,39 @@ struct LibraryView: View {
                                         }
                                     }
                                 }
-                                if categoryFilter == nil {
-                                    CollapsibleLibrarySection(
-                                        category: .poetry,
-                                        isExpanded: $poetrySectionExpanded,
-                                        items: sortedInCategory(.poetry)
-                                    ) { doc in
-                                        documentRow(doc, labelLeadingInset: 0)
-                                    }
+                                CollapsibleLibrarySection(
+                                    category: .poetry,
+                                    isExpanded: $poetrySectionExpanded,
+                                    items: sortedInCategory(.poetry)
+                                ) { doc in
+                                    documentRow(doc, labelLeadingInset: 0)
+                                }
 
-                                    let anth = sortedInCategory(.anthology)
-                                    if !anth.isEmpty {
-                                        Section {
-                                            if anthologySectionExpanded {
-                                                ForEach(anthologyMajorGroups(from: anth)) { major in
-                                                    anthologyMajorSection(major: major)
-                                                }
+                                let anth = sortedInCategory(.anthology)
+                                if !anth.isEmpty {
+                                    Section {
+                                        if anthologySectionExpanded {
+                                            ForEach(anthologyMajorGroups(from: anth)) { major in
+                                                anthologyMajorSection(major: major)
                                             }
-                                        } header: {
-                                            Button {
-                                                anthologySectionExpanded.toggle()
-                                            } label: {
-                                                HStack {
-                                                    Image(systemName: anthologySectionExpanded ? "chevron.down" : "chevron.right")
-                                                        .font(.caption.weight(.semibold))
-                                                        .foregroundStyle(.secondary)
-                                                    Label(DocumentCategory.anthology.displayName, systemImage: DocumentCategory.anthology.systemImage)
-                                                    Spacer()
-                                                    Text("\(anth.count)")
-                                                        .font(.caption)
-                                                        .foregroundStyle(.secondary)
-                                                }
-                                                .textCase(nil)
-                                            }
-                                            .buttonStyle(.plain)
                                         }
-                                    }
-                                } else {
-                                    ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
-                                        documentRow(doc, labelLeadingInset: 0)
+                                    } header: {
+                                        Button {
+                                            anthologySectionExpanded.toggle()
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: anthologySectionExpanded ? "chevron.down" : "chevron.right")
+                                                    .font(.caption.weight(.semibold))
+                                                    .foregroundStyle(.secondary)
+                                                Label(DocumentCategory.anthology.displayName, systemImage: DocumentCategory.anthology.systemImage)
+                                                Spacer()
+                                                Text("\(anth.count)")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            .textCase(nil)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 }
                     }
@@ -178,20 +170,7 @@ struct LibraryView: View {
         .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
         .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Picker("分组", selection: $categoryFilter) {
-                            Text("全部").tag(Optional<DocumentCategory>.none)
-                            ForEach(DocumentCategory.allCases) { c in
-                                Label(c.displayName, systemImage: c.systemImage).tag(Optional(c))
-                            }
-                        }
-                    } label: {
-                        Label("分组", systemImage: "line.3.horizontal.decrease.circle")
-                    }
-                }
-
-                ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink("设置") {
+                    NavigationLink {
                         SettingsPanel(preferences: $store.readingPreferences)
                             .environmentObject(store)
                             .scrollContentBackground(.hidden)
@@ -200,12 +179,18 @@ struct LibraryView: View {
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
                             .toolbarBackground(.visible, for: .navigationBar)
+                    } label: {
+                        Text("设置")
+                            .font(.body)
                     }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("导入") {
+                    Button {
                         showImporter = true
+                    } label: {
+                        Text("导入")
+                            .font(.body)
                     }
                 }
             }

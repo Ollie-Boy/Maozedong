@@ -1,15 +1,13 @@
-App icon (1024×1024): red seal 「毛」 cropped from the calligraphy GIF:
+App icon (1024×1024) derived from:
 
-  http://59.46.86.120:9002/shici/pic/shici/qinyuanchunxue.gif
+  http://www.cppcc.gov.cn/ViewFiels/2009/08/2009-08-26/ryzc/%E6%AF%9B%E6%B3%BD%E4%B8%9C.jpg
 
-Regenerate (after downloading the GIF locally):
+Regenerate (square center-crop with slight upward bias for portraits):
 
-  python3 scripts/generate_ma_seal_app_icon.py /path/to/qinyuanchunxue.gif
+  python3 scripts/generate_app_icon.py /path/to/毛泽东.jpg
 
-Or:
+Or download:
 
-  python3 scripts/generate_ma_seal_app_icon.py --url "http://59.46.86.120:9002/shici/pic/shici/qinyuanchunxue.gif"
+  python3 scripts/generate_app_icon.py --url "http://www.cppcc.gov.cn/ViewFiels/2009/08/2009-08-26/ryzc/%E6%AF%9B%E6%B3%BD%E4%B8%9C.jpg"
 
-Note: The GIF is palette-based; the script maps palette indices to RGB (plain
-Image.convert("RGB") can drop the red seal). Default crop box targets the large
-bottom-left seal in this file.
+Optional: --top-bias 0.12 to show more of the upper part of the photo.
