@@ -181,8 +181,10 @@ struct LibraryView: View {
                             .toolbarBackground(.visible, for: .navigationBar)
                     } label: {
                         Text("设置")
+                            .font(.body)
                     }
-                    .buttonStyle(.bordered)
+                    // `.bordered` in the nav bar gets a tight square slot → looks round and clips “设置”.
+                    .fixedSize(horizontal: true, vertical: false)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -190,8 +192,9 @@ struct LibraryView: View {
                         showImporter = true
                     } label: {
                         Text("导入")
+                            .font(.body)
                     }
-                    .buttonStyle(.bordered)
+                    .fixedSize(horizontal: true, vertical: false)
                 }
             }
             .fileImporter(
