@@ -24,19 +24,8 @@ enum AppAppearanceUIKit {
         UISearchBar.appearance().tintColor = label
         UISearchBar.appearance().barTintColor = bg
 
-        let fieldBg: UIColor
-        switch theme {
-        case .light:
-            fieldBg = UIColor(white: 0.94, alpha: 1)
-        case .dark:
-            fieldBg = UIColor(white: 0.18, alpha: 1)
-        case .sepia:
-            fieldBg = UIColor(red: 0.93, green: 0.89, blue: 0.80, alpha: 1)
-        }
-        let searchField = UISearchTextField.appearance(whenContainedInInstancesOf: [UISearchBar.self])
-        searchField.backgroundColor = fieldBg
-        searchField.spellCheckingType = .no
-        searchField.autocorrectionType = .no
+        // Do not use UISearchTextField.appearance(...): setSpellCheckingType / backgroundColor etc.
+        // crash on newer iOS when applied via UIAppearance (SwiftUI .searchable).
 
         UITableView.appearance().backgroundColor = .clear
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
