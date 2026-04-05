@@ -14,6 +14,8 @@ final class DocumentStore: ObservableObject {
     @Published var errorMessage: String?
 
     private var readerStateDiskTask: Task<Void, Never>?
+    private var lastOpenedDocumentTask: Task<Void, Never>?
+    private var pendingLastOpenedDocumentId: UUID?
     private var readingPreferencesDiskTask: Task<Void, Never>?
     /// Skip persisting when assigning preferences loaded from disk (avoid rewrite-on-launch).
     private var readingPreferencesPersistenceDepth = 0
@@ -286,6 +288,30 @@ final class DocumentStore: ObservableObject {
         next.lastOpenedAt = Date()
         readerState = next
         scheduleReaderStateDiskWrite()
+    }
+
+    /// Batches rapid horizontal pager changes so `readerState` does not republish on every scroll tick (high CPU / Energy).
+    func scheduleRecordLastOpenedDocument(documentId: UUID) {
+        guard !isPreviewMode else { return }
+        pendingLastOpenedDocumentId = documentId
+        lastOpenedDocumentTask?.cancel()
+        lastOpenedDocumentTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 320_000_000)
+            guard !Task.isCancelled else { return }
+            guard let id = pendingLastOpenedDocumentId else { return }
+            recordLastOpenedDocument(documentId: id)
+            pendingLastOpenedDocumentId = nil
+        }
+    }
+
+    /// Call when leaving the reader stack so the last swiped article is recorded immediately.
+    func flushLastOpenedDocumentSchedule() {
+        lastOpenedDocumentTask?.cancel()
+        lastOpenedDocumentTask = nil
+        if let id = pendingLastOpenedDocumentId {
+            recordLastOpenedDocument(documentId: id)
+            pendingLastOpenedDocumentId = nil
+        }
     }
 
     var continueReadingDocument: DocumentItem? {

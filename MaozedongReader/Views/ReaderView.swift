@@ -250,16 +250,21 @@ struct ReaderView: View {
                         ForEach(blocks) { item in
                             blockView(item)
                                 .id(item.id)
-                                .background(
-                                    GeometryReader { g in
-                                        Color.clear
-                                            .allowsHitTesting(false)
-                                            .preference(
-                                                key: BlockFramesKey.self,
-                                                value: [item.id: g.frame(in: .named(scrollSpaceName))]
-                                            )
+                                .background {
+                                    // Per-block frames are only needed for fine-grained reading progress on the
+                                    // active page. Sibling ReaderViews in the horizontal pager would otherwise
+                                    // merge hundreds of preferences on every vertical scroll → high CPU when swiping fast.
+                                    if presentsNavigationChrome {
+                                        GeometryReader { g in
+                                            Color.clear
+                                                .allowsHitTesting(false)
+                                                .preference(
+                                                    key: BlockFramesKey.self,
+                                                    value: [item.id: g.frame(in: .named(scrollSpaceName))]
+                                                )
+                                        }
                                     }
-                                )
+                                }
                         }
                     }
                     .padding(.horizontal)

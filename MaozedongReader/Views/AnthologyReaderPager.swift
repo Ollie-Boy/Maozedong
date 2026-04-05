@@ -40,7 +40,10 @@ struct AnthologyReaderPager: View {
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
         .toolbarBackground(.visible, for: .bottomBar)
         .onChange(of: selectionId) { _, id in
-            store.recordLastOpenedDocument(documentId: id)
+            store.scheduleRecordLastOpenedDocument(documentId: id)
+        }
+        .onDisappear {
+            store.flushLastOpenedDocumentSchedule()
         }
     }
 }
