@@ -6,9 +6,9 @@ struct SettingsPanel: View {
     @Binding var preferences: ReadingPreferences
     var onSave: (() -> Void)?
 
-    @State private var showExport = false
+    @State private var showExportShare = false
+    @State private var exportShareURL: URL?
     @State private var showImportBackup = false
-    @State private var exportDocument: BackupFileDocument?
     @State private var backupAlert: String?
 
     var body: some View {
@@ -47,8 +47,12 @@ struct SettingsPanel: View {
             Section("数据") {
                 Button("导出备份（JSON）") {
                     do {
-                        exportDocument = BackupFileDocument(data: try store.exportBackupData())
-                        showExport = true
+                        let data = try store.exportBackupData()
+                        let name = "MaozedongReader-backup-\(Int(Date().timeIntervalSince1970)).json"
+                        let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+                        try data.write(to: url, options: .atomic)
+                        exportShareURL = url
+                        showExportShare = true
                     } catch {
                         backupAlert = "导出失败：\(error.localizedDescription)"
                     }
@@ -58,13 +62,15 @@ struct SettingsPanel: View {
                 }
             }
         }
-        .fileExporter(
-            isPresented: $showExport,
-            document: $exportDocument,
-            contentType: BackupFileDocument.self,
-            defaultFilename: "MaozedongReader-backup.json"
-        ) { _ in
-            exportDocument = nil
+        .sheet(isPresented: $showExportShare, onDismiss: {
+            if let u = exportShareURL {
+                try? FileManager.default.removeItem(at: u)
+            }
+            exportShareURL = nil
+        }) {
+            if let url = exportShareURL {
+                ActivityShareSheet(items: [url])
+            }
         }
         .fileImporter(
             isPresented: $showImportBackup,
