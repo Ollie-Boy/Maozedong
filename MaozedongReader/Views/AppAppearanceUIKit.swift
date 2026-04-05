@@ -37,9 +37,6 @@ enum AppAppearanceUIKit {
         searchField.backgroundColor = fieldBg
         searchField.spellCheckingType = .no
         searchField.autocorrectionType = .no
-        searchField.smartDashesType = .no
-        searchField.smartQuotesType = .no
-        searchField.smartInsertDeleteType = .no
 
         UITableView.appearance().backgroundColor = .clear
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
@@ -49,11 +46,6 @@ enum AppAppearanceUIKit {
         var cellBg = UIBackgroundConfiguration.listPlainCell()
         cellBg.backgroundColor = rowUICol
         UITableViewCell.appearance().backgroundConfiguration = cellBg
-
-        let plainField = UITextField.appearance()
-        plainField.smartDashesType = .no
-        plainField.smartQuotesType = .no
-        plainField.smartInsertDeleteType = .no
 
         let clearHeaderFooter = UIBackgroundConfiguration.clear()
         UITableViewHeaderFooterView.appearance().backgroundConfiguration = clearHeaderFooter
