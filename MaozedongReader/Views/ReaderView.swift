@@ -43,12 +43,15 @@ struct ReaderView: View {
     @State private var scrollContentMinY: CGFloat = 0
     @State private var blockFrames: [UUID: CGRect] = [:]
     @State private var viewportHeight: CGFloat = 600
+    @State private var blockFramesDebounceTask: Task<Void, Never>?
 
     @State private var scrollToBlockId: UUID?
     @State private var progressSaveTask: Task<Void, Never>?
     @State private var expandedNoteBlockIds: Set<UUID> = []
 
     private let scrollSpaceName = "readerScroll"
+    /// Coalesce hundreds of per-block preference merges while vertically scrolling long articles.
+    private static let blockFramesDebounceNs: UInt64 = 90_000_000
 
     var body: some View {
         let blocks = displayBlocks
@@ -199,6 +202,8 @@ struct ReaderView: View {
         }
         .onChange(of: document.id) { _, _ in
             expandedNoteBlockIds = []
+            blockFramesDebounceTask?.cancel()
+            blockFramesDebounceTask = nil
             prepareContent()
         }
         .onChange(of: document.content) { _, _ in
@@ -206,6 +211,8 @@ struct ReaderView: View {
         }
         .onDisappear {
             progressSaveTask?.cancel()
+            blockFramesDebounceTask?.cancel()
+            blockFramesDebounceTask = nil
             let utf16 = currentProgressUTF16(blocks: blocks) ?? store.progressUTF16Offset(for: document.id) ?? 0
             store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
         }
@@ -279,7 +286,14 @@ struct ReaderView: View {
                 )
                 .coordinateSpace(name: scrollSpaceName)
                 .onPreferenceChange(ScrollContentMinYKey.self) { scrollContentMinY = $0 }
-                .onPreferenceChange(BlockFramesKey.self) { blockFrames = $0 }
+                .onPreferenceChange(BlockFramesKey.self) { merged in
+                    blockFramesDebounceTask?.cancel()
+                    blockFramesDebounceTask = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: Self.blockFramesDebounceNs)
+                        guard !Task.isCancelled else { return }
+                        blockFrames = merged
+                    }
+                }
                 .onPreferenceChange(ViewportHeightKey.self) { h in
                     if h > 1 { viewportHeight = h }
                 }

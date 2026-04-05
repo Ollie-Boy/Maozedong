@@ -1,25 +1,14 @@
 import SwiftUI
 
-/// Horizontal paging with **at most three** `ReaderView` instances (previous / current / next).
-/// Keeps the same swipe UX as a full `LazyHStack` but avoids dozens of huge markdown bodies in memory during layout.
+/// Full `LazyHStack` of articles so `scrollPosition(id:)` IDs stay stable. A sliding **3-page window** caused
+/// the HStack’s children to be replaced on every selection change; scroll offset and id binding disagreed and
+/// one light flick could snap through many pages.
 struct HorizontalReaderPager: View {
     let documents: [DocumentItem]
     @Binding var selectionId: UUID
     let orderedIds: [UUID]
     var onRequestPop: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
-
-    private var windowedDocuments: [DocumentItem] {
-        guard let idx = orderedIds.firstIndex(of: selectionId) else {
-            return documents.filter { $0.id == selectionId }
-        }
-        let lo = max(0, idx - 1)
-        let hi = min(orderedIds.count - 1, idx + 1)
-        return (lo...hi).compactMap { j in
-            let id = orderedIds[j]
-            return documents.first { $0.id == id }
-        }
-    }
 
     private var scrollPositionBinding: Binding<UUID?> {
         Binding(
@@ -31,14 +20,13 @@ struct HorizontalReaderPager: View {
     }
 
     var body: some View {
-        let windowed = windowedDocuments
         Group {
-            if windowed.isEmpty {
+            if documents.isEmpty {
                 Color.clear
             } else {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 0) {
-                        ForEach(windowed) { doc in
+                        ForEach(documents) { doc in
                             ReaderView(document: doc, presentsNavigationChrome: doc.id == selectionId)
                                 .containerRelativeFrame(.horizontal)
                         }
