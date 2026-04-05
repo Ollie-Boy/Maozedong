@@ -43,6 +43,7 @@
 		BF000000000000000000002A /* AppTheming.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000002A /* AppTheming.swift */; };
 		BF000000000000000000002B /* AppAppearanceUIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000002B /* AppAppearanceUIKit.swift */; };
 		BF000000000000000000002C /* ReaderTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000002C /* ReaderTypography.swift */; };
+		BF000000000000000000002D /* LeadLayoutNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000002D /* LeadLayoutNormalizer.swift */; };
 		BF0000000000000000000011 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000011 /* AVFoundation.framework */; };
 		BF0000000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000013 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -84,6 +85,7 @@
 		FR0000000000000000000002A /* AppTheming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheming.swift; sourceTree = "<group>"; };
 		FR0000000000000000000002B /* AppAppearanceUIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAppearanceUIKit.swift; sourceTree = "<group>"; };
 		FR0000000000000000000002C /* ReaderTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderTypography.swift; sourceTree = "<group>"; };
+		FR0000000000000000000002D /* LeadLayoutNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadLayoutNormalizer.swift; sourceTree = "<group>"; };
 		FR00000000000000000000011 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		FR00000000000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FR00000000000000000000APP /* MaozedongReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MaozedongReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -174,6 +176,7 @@
 				FR00000000000000000000022 /* PoemDateExtractor.swift */,
 				FR00000000000000000000027 /* BundledAnthologyImporter.swift */,
 				FR00000000000000000000029 /* AnthologyTocParser.swift */,
+				FR0000000000000000000002D /* LeadLayoutNormalizer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -291,6 +294,7 @@
 				BF0000000000000000000024 /* AnthologyReaderPager.swift in Sources */,
 				BF0000000000000000000027 /* BundledAnthologyImporter.swift in Sources */,
 				BF0000000000000000000029 /* AnthologyTocParser.swift in Sources */,
+				BF000000000000000000002D /* LeadLayoutNormalizer.swift in Sources */,
 				BF0000000000000000000022 /* PoemDateExtractor.swift in Sources */,
 				BF0000000000000000000023 /* DocumentItem+Sort.swift in Sources */,
 				BF000000000000000000000F /* ReaderView.swift in Sources */,

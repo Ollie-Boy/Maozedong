@@ -84,16 +84,21 @@ enum PoetryCorpusParser {
     }
 
     private static func buildMarkdown(title: String, main: String, note: String?) -> String {
-        let mainMd = main
+        let split = LeadLayoutNormalizer.splitPoetryMetaAndBody(mainRaw: main)
+        let bodyMd = split.body
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { String($0).trimmingCharacters(in: .whitespaces) }
             .joined(separator: "  \n")
+        let metaLine: String
+        if let m = split.meta, !m.isEmpty {
+            metaLine = "\n\n**\(m)**\n\n"
+        } else {
+            metaLine = "\n\n"
+        }
 
         guard let note, !note.isEmpty else {
             return """
-            # \(title)
-
-            \(mainMd)
+            # \(title)\(metaLine)\(bodyMd)
             """
         }
 
@@ -104,16 +109,12 @@ enum PoetryCorpusParser {
 
         guard !citationLine.isEmpty else {
             return """
-            # \(title)
-
-            \(mainMd)
+            # \(title)\(metaLine)\(bodyMd)
             """
         }
 
         return """
-        # \(title)
-
-        \(mainMd)
+        # \(title)\(metaLine)\(bodyMd)
 
         ---
 

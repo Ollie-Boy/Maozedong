@@ -72,7 +72,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledAnthologyVersionKey = "bundledAnthologyCorpusVersion"
-    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v4-vol-split"
+    private static let bundledAnthologyVersion = "weiyinfu-src-bundled-v5-lead-layout"
 
     private func mergeBundledAnthologyIfNeeded() {
         guard !isPreviewMode else { return }
@@ -111,7 +111,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledPoetryVersionKey = "bundledPoetryCorpusVersion"
-    private static let bundledPoetryVersion = "v7-poetry-no-zhengwen-heading"
+    private static let bundledPoetryVersion = "v8-poetry-meta-line"
 
     private func normalizeDocumentsAfterLoad() {
         guard !isPreviewMode else { return }

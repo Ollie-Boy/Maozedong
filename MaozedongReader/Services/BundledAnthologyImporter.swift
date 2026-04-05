@@ -23,7 +23,8 @@ enum BundledAnthologyImporter {
             if name.caseInsensitiveCompare("SUMMARY.md") == .orderedSame { continue }
 
             guard let data = try? Data(contentsOf: url) else { continue }
-            guard let text = decodeText(data: data), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+            guard var text = decodeText(data: data), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+            text = LeadLayoutNormalizer.normalizeAnthologyMarkdown(text)
 
             let (seq, title) = parseFileName(name)
             let te = toc[name]
