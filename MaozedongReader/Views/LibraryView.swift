@@ -1,4 +1,25 @@
 import SwiftUI
+import UIKit
+
+/// Matches system bar-style frosted chrome (navigation / search field blur strength on current iOS).
+private enum LibrarySearchChrome {
+    /// Slightly inset from screen edges like embedded search fields.
+    static let widthFraction: CGFloat = 0.92
+    static let maxBarWidth: CGFloat = 560
+    /// `Material.bar` aligns with `UIBlurEffect.Style.systemChromeMaterial` / toolbar search appearance.
+    static var barMaterial: Material { .bar }
+    /// Room for capsule, vertical padding, and a light shadow without clipping.
+    static let insetHeight: CGFloat = 72
+    static let shadowOpacity: Double = 0.045
+    static let shadowRadius: CGFloat = 10
+    static let shadowY: CGFloat = 3
+    static var hairlineWidth: CGFloat { 1.0 / max(UIScreen.main.scale, 1) }
+
+    static func hairlineSeparator(for prefs: ReadingPreferences) -> Color {
+        let alpha: CGFloat = prefs.theme == .dark ? 0.32 : 0.2
+        Color(UIColor.separator.withAlphaComponent(alpha))
+    }
+}
 
 private struct AnthologyMinorBucket: Identifiable {
     let id: String
@@ -85,8 +106,18 @@ struct LibraryView: View {
         "\(majorId)|\(subId)"
     }
 
-    /// Bottom “glass” search bar (avoids navigation `UISearchController`; floats above list content).
+    /// Bottom floating search: width and blur match system bar chrome (≈ `UIBlurEffect` bar material).
     private var libraryFloatingSearchBar: some View {
+        GeometryReader { geo in
+            let usable = max(geo.size.width, 1)
+            let barWidth = min(usable * LibrarySearchChrome.widthFraction, LibrarySearchChrome.maxBarWidth)
+            libraryFloatingSearchBarContent(barWidth: barWidth)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
+        }
+        .frame(height: LibrarySearchChrome.insetHeight)
+    }
+
+    private func libraryFloatingSearchBarContent(barWidth: CGFloat) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.body.weight(.medium))
@@ -108,19 +139,18 @@ struct LibraryView: View {
                 .accessibilityLabel("清除搜索")
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .frame(width: barWidth)
         .background {
-            // Match navigation bar text controls (设置 / 导入): system-style continuous capsule.
             Capsule(style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(LibrarySearchChrome.barMaterial)
         }
         .overlay {
             Capsule(style: .continuous)
-                .strokeBorder(store.readingPreferences.textColor.opacity(0.12), lineWidth: 1)
+                .strokeBorder(LibrarySearchChrome.hairlineSeparator(for: store.readingPreferences), lineWidth: LibrarySearchChrome.hairlineWidth)
         }
-        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 6)
-        .padding(.horizontal, 16)
+        .shadow(color: Color.black.opacity(LibrarySearchChrome.shadowOpacity), radius: LibrarySearchChrome.shadowRadius, x: 0, y: LibrarySearchChrome.shadowY)
         .padding(.top, 6)
         .padding(.bottom, 10)
     }
