@@ -172,10 +172,10 @@ struct LibraryView: View {
                 }
         }
         .navigationTitle("毛泽东著作")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
+        .searchable(text: $libraryQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "搜索标题与全文")
         .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {

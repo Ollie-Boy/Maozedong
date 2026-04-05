@@ -14,6 +14,13 @@ private struct BlockFramesKey: PreferenceKey {
     }
 }
 
+private struct ViewportHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct ReaderView: View {
     @EnvironmentObject private var store: DocumentStore
     @StateObject private var speechService = SpeechService()
@@ -47,12 +54,6 @@ struct ReaderView: View {
             store.readingPreferences.backgroundColor
                 .ignoresSafeArea()
 
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear { viewportHeight = geo.size.height }
-                    .onChange(of: geo.size.height) { _, h in viewportHeight = h }
-            }
-
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 14) {
@@ -60,10 +61,12 @@ struct ReaderView: View {
                             .frame(height: 0)
                             .background(
                                 GeometryReader { g in
-                                    Color.clear.preference(
-                                        key: ScrollContentMinYKey.self,
-                                        value: g.frame(in: .named(scrollSpaceName)).minY
-                                    )
+                                    Color.clear
+                                        .allowsHitTesting(false)
+                                        .preference(
+                                            key: ScrollContentMinYKey.self,
+                                            value: g.frame(in: .named(scrollSpaceName)).minY
+                                        )
                                 }
                             )
 
@@ -72,10 +75,12 @@ struct ReaderView: View {
                                 .id(item.id)
                                 .background(
                                     GeometryReader { g in
-                                        Color.clear.preference(
-                                            key: BlockFramesKey.self,
-                                            value: [item.id: g.frame(in: .named(scrollSpaceName))]
-                                        )
+                                        Color.clear
+                                            .allowsHitTesting(false)
+                                            .preference(
+                                                key: BlockFramesKey.self,
+                                                value: [item.id: g.frame(in: .named(scrollSpaceName))]
+                                            )
                                     }
                                 )
                         }
@@ -83,9 +88,19 @@ struct ReaderView: View {
                     .padding(.horizontal)
                     .padding(.vertical, 12)
                 }
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .allowsHitTesting(false)
+                            .preference(key: ViewportHeightKey.self, value: geo.size.height)
+                    }
+                )
                 .coordinateSpace(name: scrollSpaceName)
                 .onPreferenceChange(ScrollContentMinYKey.self) { scrollContentMinY = $0 }
                 .onPreferenceChange(BlockFramesKey.self) { blockFrames = $0 }
+                .onPreferenceChange(ViewportHeightKey.self) { h in
+                    if h > 1 { viewportHeight = h }
+                }
                 .onChange(of: scrollContentMinY) { _, _ in scheduleProgressSave(blocks: blocks) }
                 .onChange(of: blockFrames) { _, _ in scheduleProgressSave(blocks: blocks) }
                 .onAppear {
