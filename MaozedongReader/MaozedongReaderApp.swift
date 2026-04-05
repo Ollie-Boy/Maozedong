@@ -1,11 +1,24 @@
 import SwiftUI
+import UIKit
 
 @main
 struct MaozedongReaderApp: App {
     @StateObject private var store = DocumentStore()
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.scenePhase) private var scenePhase
     @State private var navPath = NavigationPath()
+
+    init() {
+        AppFonts.registerBundledFontsIfNeeded()
+        let body = AppTypography.uiFont(size: 17, weight: .regular)
+        let semibold = AppTypography.uiFont(size: 17, weight: .semibold)
+        UILabel.appearance().font = body
+        UITextField.appearance().font = body
+        UITextView.appearance().font = body
+        UIButton.appearance().titleLabel?.font = body
+        UINavigationBar.appearance().titleTextAttributes = [.font: semibold]
+        UINavigationBar.appearance().largeTitleTextAttributes = [.font: AppTypography.uiFont(size: 34, weight: .bold)]
+        UISearchBar.appearance().searchTextField.font = body
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -13,11 +26,7 @@ struct MaozedongReaderApp: App {
                 LibraryView(path: $navPath)
             }
             .environmentObject(store)
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .background || phase == .inactive {
-                    store.endReadingSession()
-                }
-            }
+            .font(AppTypography.swiftUIFont(size: 17))
             .preferredColorScheme(store.readingPreferences.preferredColorSchemeResolved(environmentScheme: colorScheme))
             .onAppear {
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)

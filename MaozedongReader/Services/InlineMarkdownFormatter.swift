@@ -24,7 +24,7 @@ enum InlineMarkdownFormatter {
         var i = line.startIndex
         let plainFont = ReaderTypography.bodyFont(size: baseFontSize)
         let boldFont = ReaderTypography.boldFont(size: baseFontSize)
-        let codeFont = Font.system(size: baseFontSize * 0.92, design: .monospaced)
+        let codeFont = ReaderTypography.bodyFont(size: baseFontSize * 0.92)
 
         func appendPlain(_ substr: Substring) {
             guard !substr.isEmpty else { return }

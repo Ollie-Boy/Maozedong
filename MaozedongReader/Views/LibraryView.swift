@@ -50,7 +50,7 @@ struct LibraryView: View {
         return majorKeys.map { m in
             let docs = byMajor[m] ?? []
             let title = docs.first.flatMap { $0.anthologyMajorTitle }?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let majorTitle = (title?.isEmpty == false) ? title! : (m == 99 ? "选集篇目" : "选集")
+            let majorTitle = (title?.isEmpty == false) ? title! : (m == 99 ? "选集篇目" : "毛泽东选集")
             return AnthologyMajorGroup(id: m, title: majorTitle, subsections: anthologyMinorBuckets(from: docs))
         }
     }
@@ -143,7 +143,7 @@ struct LibraryView: View {
                                                 Image(systemName: anthologySectionExpanded ? "chevron.down" : "chevron.right")
                                                     .font(.caption.weight(.semibold))
                                                     .foregroundStyle(.secondary)
-                                                Label(DocumentCategory.anthology.displayName, systemImage: DocumentCategory.anthology.systemImage)
+                                                Text(DocumentCategory.anthology.displayName)
                                                 Spacer()
                                                 Text("\(anth.count)")
                                                     .font(.caption)
@@ -181,8 +181,8 @@ struct LibraryView: View {
                             .toolbarBackground(.visible, for: .navigationBar)
                     } label: {
                         Text("设置")
-                            .font(.body)
                     }
+                    .buttonStyle(.bordered)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -190,8 +190,8 @@ struct LibraryView: View {
                         showImporter = true
                     } label: {
                         Text("导入")
-                            .font(.body)
                     }
+                    .buttonStyle(.bordered)
                 }
             }
             .fileImporter(
@@ -330,7 +330,7 @@ struct LibraryView: View {
             Button(role: .destructive) {
                 store.deleteDocument(id: doc.id)
             } label: {
-                Label("删除", systemImage: "trash")
+                Text("删除")
             }
         }
         .contextMenu {
@@ -340,7 +340,7 @@ struct LibraryView: View {
                         store.updateCategory(documentId: doc.id, category: c)
                     } label: {
                         if doc.category == c {
-                            Label(c.displayName, systemImage: "checkmark")
+                            Text("✓ \(c.displayName)")
                         } else {
                             Text(c.displayName)
                         }
@@ -415,7 +415,7 @@ private struct CollapsibleLibrarySection<Row: View>: View {
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
-                        Label(category.displayName, systemImage: category.systemImage)
+                        Text(category.displayName)
                         Spacer()
                         Text("\(items.count)")
                             .font(.caption)

@@ -23,7 +23,6 @@ private struct ViewportHeightKey: PreferenceKey {
 
 struct ReaderView: View {
     @EnvironmentObject private var store: DocumentStore
-    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var speechService = SpeechService()
 
     let document: DocumentItem
@@ -35,7 +34,6 @@ struct ReaderView: View {
     @State private var searchQuery = ""
     @State private var showExportShare = false
     @State private var exportShareURL: URL?
-    @State private var showReadingStats = false
     @State private var exportError: String?
 
     @State private var cachedBlocks: [MarkdownBlock] = []
@@ -83,12 +81,6 @@ struct ReaderView: View {
                             exportCurrentDocument()
                         } label: {
                             Label("导出", systemImage: "square.and.arrow.up")
-                        }
-
-                        Button {
-                            showReadingStats = true
-                        } label: {
-                            Label("统计", systemImage: "clock")
                         }
 
                         Button {
@@ -171,15 +163,6 @@ struct ReaderView: View {
                 .environmentObject(store)
             }
         }
-        .sheet(isPresented: $showReadingStats) {
-            NavigationStack {
-                ReaderReadingStatsSheet(
-                    title: document.title,
-                    seconds: store.readingSeconds(for: document.id)
-                )
-                .environmentObject(store)
-            }
-        }
         .sheet(isPresented: $showExportShare, onDismiss: {
             if let u = exportShareURL {
                 try? FileManager.default.removeItem(at: u)
@@ -202,27 +185,16 @@ struct ReaderView: View {
             prepareContent()
             if presentsNavigationChrome {
                 store.recordLastOpenedDocument(documentId: document.id)
-                store.beginReadingSession(documentId: document.id)
             }
         }
         .onChange(of: presentsNavigationChrome) { _, chrome in
             if chrome {
                 store.recordLastOpenedDocument(documentId: document.id)
-                store.beginReadingSession(documentId: document.id)
             } else {
-                store.endReadingSession()
                 progressSaveTask?.cancel()
                 let b = displayBlocks
                 let utf16 = currentProgressUTF16(blocks: b) ?? store.progressUTF16Offset(for: document.id) ?? 0
                 store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            guard presentsNavigationChrome else { return }
-            if phase == .active {
-                store.beginReadingSession(documentId: document.id)
-            } else if phase == .background || phase == .inactive {
-                store.endReadingSession()
             }
         }
         .onChange(of: document.id) { _, _ in
@@ -233,9 +205,6 @@ struct ReaderView: View {
             prepareContent()
         }
         .onDisappear {
-            if presentsNavigationChrome {
-                store.endReadingSession()
-            }
             progressSaveTask?.cancel()
             let utf16 = currentProgressUTF16(blocks: blocks) ?? store.progressUTF16Offset(for: document.id) ?? 0
             store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
@@ -691,47 +660,6 @@ private struct ReaderSearchSheet: View {
         .background(store.readingPreferences.backgroundColor)
         .listRowBackground(store.readingPreferences.listRowBackgroundColor)
         .navigationTitle("搜索")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("完成") { dismiss() }
-            }
-        }
-    }
-}
-
-// MARK: - Reading stats
-
-private struct ReaderReadingStatsSheet: View {
-    let title: String
-    let seconds: Int
-
-    @EnvironmentObject private var store: DocumentStore
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        List {
-            Section {
-                LabeledContent("篇目") {
-                    Text(title)
-                        .multilineTextAlignment(.trailing)
-                }
-                LabeledContent("累计阅读") {
-                    Text(DocumentStore.formatReadingDuration(seconds: seconds))
-                }
-            }
-            Section {
-                Text("计时在离开本篇或切换到其他篇目时累计；应用进入后台也会结算。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .background(store.readingPreferences.backgroundColor)
-        .listRowBackground(store.readingPreferences.listRowBackgroundColor)
-        .navigationTitle("阅读统计")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)

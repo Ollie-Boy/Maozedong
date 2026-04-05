@@ -2,6 +2,9 @@
 
 一个基于 **SwiftUI** 的 iPhone 阅读 App，主界面与系统桌面显示名 **「学习课本」**（`CFBundleDisplayName`）。
 
+- **离线**：应用内**不包含**网络请求代码；内容来自内置资源与用户选择的本地文件（系统文件选择器与分享表由系统处理，不用于拉取远程正文）。
+- **字体**：内置 **Noto Serif CJK SC**（宋体类印刷风格，SIL OFL 1.1），见 `Resources/Fonts/NotoSerif-LICENSE.txt`。
+
 核心目标：
 - 阅读文本（诗词、语录、文章等）
 - 支持系统语音朗读
@@ -13,7 +16,7 @@
 ## 当前功能
 
 1. **书库页（Library）**
-   - 分组：**诗词**、**选集**（可折叠；诗词按年代排序，列表旁显示年份）
+   - 分组：**毛泽东诗词**、**毛泽东选集**（可折叠；诗词按年代排序，列表旁显示年份；分组标题无类别图标）
    - **选集**：**完全离线**，正文在 `BundledAnthology/*.md`（跳过 `目录.md`、`SUMMARY.md`）；由 `Resources/AnthologyTOC.md` 解析。**书库**：按卷（`#`）折叠；卷内若有多个 `##` 分期再折叠，否则直接列篇目。**左右滑动** 仅在 **同一卷内 `##` 分组**（若有）中切换相邻篇
    - 进入 **诗词** 后支持 **左右滑动** 切换相邻篇目（时间顺序）
    - 内置 **毛泽东诗词** 全文（**131 篇**），资源为 `Resources/BundledPoetryCorpus_part*.txt`；**# 标题 → 加粗日期行 → 正文**；注释在 `---` 后为可折叠脚注区；书库 **分组列表 + `.searchable`**（全文本地过滤，不调用网络 API）
@@ -27,7 +30,7 @@
 
 2. **阅读页（Reader）**
    - 导航为 **根 `NavigationStack` + `NavigationPath`**，阅读页用 **标准 `navigationTitle`**，减轻顶栏闪动；诗词/选集横向翻页 **不显示** 底部分页圆点；在 **最后一篇** 时从屏幕 **右侧向左滑** 可 **返回书库**
-   - 正文优先 **楷体**（`Kaiti SC` 等），缺省仿宋/宋体/衬线
+   - 正文与界面默认使用 **嵌入的 Noto Serif CJK SC**（与 `ReaderTypography` / `AppTypography` 一致）
    - **Markdown**：标题、引用、列表、分隔线；选集 **blockquote** 为脚注式左边线样式
    - **目录**：有 `##`/`###` 等标题时才显示「目录」按钮；无标题则不弹空白说明
    - **全文搜索**（当前文档）
@@ -35,7 +38,6 @@
    - 一键朗读/停止朗读（`AVSpeechSynthesizer`）
    - **VoiceOver**：诗词正文每一行段落有独立 **无障碍标签**（朗读为纯文本，去掉 `**` 等标记）
    - **导出**：工具栏「导出」将当前篇生成为临时 `.md` 并通过系统分享表保存或分享
-   - **阅读统计**：工具栏「统计」显示本篇 **累计阅读时长**（离开本篇、切换分页、进后台时累计）
    - 阅读设置（字号、行距、主题、备份）
 
 3. **导入功能**
@@ -46,10 +48,10 @@
 4. **持久化**
    - 文档列表与内容本地保存
    - 阅读偏好（字号/行距/主题）本地保存
-   - 阅读进度与阅读时长：`reader_state.json`
+   - 阅读进度：`reader_state.json`
 
 5. **备份**
-   - 设置中 **导出备份（JSON）** / **从备份恢复**，包含书库、阅读进度、阅读时长与偏好（完全离线文件）
+   - 设置中 **导出备份（JSON）** / **从备份恢复**，包含书库、阅读进度与偏好（完全离线文件）
 
 ## 目录结构
 
@@ -57,7 +59,8 @@
 MaozedongReader.xcodeproj/   # Xcode 工程（打开此文件）
 MaozedongReader/
   MaozedongReaderApp.swift
-  Resources/               # 内置诗词语料（UTF-8 分片 txt）、AnthologyTOC.md
+  Info.plist               # UIAppFonts 等
+  Resources/               # 内置诗词语料、AnthologyTOC.md、Fonts/*.otf
   Models/
     DocumentItem.swift
     DocumentCategory.swift
@@ -67,6 +70,7 @@ MaozedongReader/
     BundledPoetryImporter.swift
     PoetryCorpusParser.swift
     DocumentStore.swift
+    AppFonts.swift
     PlainTextFileImporter.swift
     PlainTextParagraphs.swift
     MarkdownBlockParser.swift
@@ -76,6 +80,8 @@ MaozedongReader/
   Views/
     LibraryView.swift
     ReaderView.swift
+    AppTypography.swift
+    ReaderTypography.swift
     SettingsPanel.swift
 ```
 
