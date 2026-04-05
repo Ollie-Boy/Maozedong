@@ -33,14 +33,28 @@ enum AppAppearanceUIKit {
         case .sepia:
             fieldBg = UIColor(red: 0.93, green: 0.89, blue: 0.80, alpha: 1)
         }
-        UISearchTextField.appearance(whenContainedInInstancesOf: [UISearchBar.self]).backgroundColor = fieldBg
+        let searchField = UISearchTextField.appearance(whenContainedInInstancesOf: [UISearchBar.self])
+        searchField.backgroundColor = fieldBg
+        searchField.spellCheckingType = .no
+        searchField.autocorrectionType = .no
+        searchField.smartDashesType = .no
+        searchField.smartQuotesType = .no
+        searchField.smartInsertDeleteType = .no
 
         UITableView.appearance().backgroundColor = .clear
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
 
-        // Grouped List / section chrome: avoid default white header/footer and cell backing on newer iOS.
+        // Plain list cells: match reading background (avoids white “cards” on newer iOS).
         let rowUICol = uiBackground(for: theme)
-        UITableViewCell.appearance().backgroundColor = rowUICol
+        var cellBg = UIBackgroundConfiguration.listPlainCell()
+        cellBg.backgroundColor = rowUICol
+        UITableViewCell.appearance().backgroundConfiguration = cellBg
+
+        let plainField = UITextField.appearance()
+        plainField.smartDashesType = .no
+        plainField.smartQuotesType = .no
+        plainField.smartInsertDeleteType = .no
+
         let clearHeaderFooter = UIBackgroundConfiguration.clear()
         UITableViewHeaderFooterView.appearance().backgroundConfiguration = clearHeaderFooter
 

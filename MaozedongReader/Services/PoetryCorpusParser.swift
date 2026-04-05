@@ -102,12 +102,7 @@ enum PoetryCorpusParser {
             """
         }
 
-        let citationLine = annotationCitationLine(from: note) ?? note
-            .split(separator: "\n", omittingEmptySubsequences: false)
-            .map { String($0).trimmingCharacters(in: .whitespaces) }
-            .first(where: { !$0.isEmpty }) ?? ""
-
-        guard !citationLine.isEmpty else {
+        guard let citationBody = annotationDisplayText(from: note), !citationBody.isEmpty else {
             return """
             # \(title)\(metaLine)\(bodyMd)
             """
@@ -118,18 +113,25 @@ enum PoetryCorpusParser {
 
         ---
 
-        ## 注释
-
-        \(citationLine)
+        \(citationBody)
         """
     }
 
-    /// Keeps only the first non-empty line of the annotation block (出版来源等)，去掉其后解读性正文。
-    private static func annotationCitationLine(from note: String) -> String? {
-        let lines = note.split(separator: "\n", omittingEmptySubsequences: false)
-            .map { String($0).trimmingCharacters(in: .whitespaces) }
-        guard let first = lines.first(where: { !$0.isEmpty }) else { return nil }
-        return first
+    /// Strips `注释：` / `注释:` from every line; returns nil if nothing left (omit 注释 block entirely).
+    private static func annotationDisplayText(from note: String) -> String? {
+        let raw = note.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let cleaned: [String] = raw.map { line in
+            var t = line.trimmingCharacters(in: .whitespaces)
+            for prefix in ["注释：", "注释:"] {
+                if t.hasPrefix(prefix) {
+                    t = String(t.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
+                }
+            }
+            return t
+        }
+        let nonEmpty = cleaned.filter { !$0.isEmpty }
+        let out = nonEmpty.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return out.isEmpty ? nil : out
     }
 
     private static func dropFirstLine(_ s: String) -> String {

@@ -99,8 +99,21 @@ struct LibraryView: View {
                         description: Text("试试其他关键词或清除分组筛选。")
                     )
                 } else {
-                    List {
-                        if categoryFilter == nil {
+                    VStack(spacing: 0) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                            TextField("搜索标题与全文", text: $libraryQuery)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled(true)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(store.readingPreferences.backgroundColor)
+
+                        List {
+                            if categoryFilter == nil {
                             CollapsibleLibrarySection(
                                 category: .poetry,
                                 isExpanded: $poetrySectionExpanded,
@@ -136,17 +149,18 @@ struct LibraryView: View {
                                     .buttonStyle(.plain)
                                 }
                             }
-                        } else {
-                            ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
-                                documentRow(doc, labelLeadingInset: 0)
+                            } else {
+                                ForEach(filteredDocuments.sorted(by: DocumentItem.displaySort)) { doc in
+                                    documentRow(doc, labelLeadingInset: 0)
+                                }
                             }
                         }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                        .listRowBackground(store.readingPreferences.listRowBackgroundColor)
+                        .listSectionSpacing(.compact)
                     }
-                    .listStyle(.insetGrouped)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
-                    .listRowBackground(store.readingPreferences.listRowBackgroundColor)
-                    .listSectionSpacing(.compact)
                 }
                 }
         }
@@ -154,7 +168,6 @@ struct LibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
         .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
@@ -327,7 +340,7 @@ struct LibraryView: View {
     private func rowLabel(_ doc: DocumentItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(doc.title)
-                .font(.headline)
+                .font(ReaderTypography.bodyFont(size: 17, weight: .semibold))
             HStack(spacing: 8) {
                 if doc.category == .poetry, let y = doc.sortEpochYear {
                     Text(String(format: "%d", y))

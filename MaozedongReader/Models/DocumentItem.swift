@@ -109,6 +109,11 @@ struct DocumentItem: Identifiable, Codable, Hashable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Built-in anthology (offline `.md`); matches `BundledAnthologyImporter.sourcePrefix`.
+    var isBundledAnthology: Bool {
+        sourceFileName?.hasPrefix("bundledAnthology:") == true
+    }
+
     var isLikelyMarkdown: Bool {
         if let name = sourceFileName?.lowercased(), name.hasSuffix(".md") { return true }
         let s = content

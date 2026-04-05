@@ -385,10 +385,13 @@ struct ReaderView: View {
 
     private func tocEntries(from blocks: [MarkdownBlock]) -> [TOCEntry] {
         blocks.compactMap { b in
-            if case let .heading(level, text) = b.kind {
-                return TOCEntry(level: level, title: text, block: b)
+            guard case let .heading(level, text) = b.kind else { return nil }
+            if document.isBundledAnthology {
+                if level == 1 { return nil }
+                if text == "注释" { return nil }
+                return TOCEntry(level: max(1, level - 1), title: text, block: b)
             }
-            return nil
+            return TOCEntry(level: level, title: text, block: b)
         }
     }
 
@@ -537,6 +540,7 @@ private struct ReaderSearchSheet: View {
             Section {
                 TextField("输入关键词", text: $query)
                     .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
             }
             if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text("在当前文档中搜索全文。")

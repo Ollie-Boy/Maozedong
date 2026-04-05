@@ -84,11 +84,16 @@ enum LeadLayoutNormalizer {
 
     private static func isStandalonePoetryMetaLine(_ line: String) -> Bool {
         let t = line.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty { return false }
+        // Full calendar date on its own line, e.g. 1919年3月12日、1918年8月17日
+        if t.range(of: #"^\d{4}年\d{1,2}月\d{1,2}日$"#, options: .regularExpression) != nil {
+            return true
+        }
         if t.contains("，") || t.contains("。") { return false }
-        if t.count > 28 { return false }
+        if t.count > 32 { return false }
         let comp = PoemDateExtractor.components(from: t + "\nx")
         if comp.year != nil { return true }
-        if t.range(of: "^\\d{4}\\s*年", options: .regularExpression) != nil, t.count <= 22 { return true }
+        if t.range(of: "^\\d{4}\\s*年", options: .regularExpression) != nil, t.count <= 24 { return true }
         return false
     }
 

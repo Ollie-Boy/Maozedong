@@ -1,5 +1,5 @@
-App icon derived from Wikimedia Commons public-domain file:
-  https://commons.wikimedia.org/wiki/File:Mao_Zedong_1919.jpg
-  Direct image: https://upload.wikimedia.org/wikipedia/commons/5/58/Mao_Zedong_1919.jpg
+App icon (1024×1024) generated offline by:
+  python3 scripts/generate_handdrawn_icon.py
 
-Cropped to upper portion and scaled to 1024×1024 for iOS. Verify licensing before App Store distribution.
+Stylized mid-century poster look (warm paper, vermilion ring, ink silhouette, gold accent).
+Replace AppIcon.png with your own artwork if you prefer a different likeness or license.
