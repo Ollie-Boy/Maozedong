@@ -85,6 +85,45 @@ struct LibraryView: View {
         "\(majorId)|\(subId)"
     }
 
+    /// Bottom “glass” search bar (avoids navigation `UISearchController`; floats above list content).
+    private var libraryFloatingSearchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.body.weight(.medium))
+                .foregroundStyle(store.readingPreferences.secondaryTextColor)
+            TextField("搜索标题与全文", text: $libraryQueryRaw)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .foregroundStyle(store.readingPreferences.textColor)
+            if !libraryQueryRaw.isEmpty {
+                Button {
+                    libraryQueryRaw = ""
+                    libraryQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(store.readingPreferences.secondaryTextColor)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("清除搜索")
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(store.readingPreferences.textColor.opacity(0.12), lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 6)
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 10)
+    }
+
     var body: some View {
         ZStack {
                 store.readingPreferences.backgroundColor.ignoresSafeArea()
@@ -97,29 +136,6 @@ struct LibraryView: View {
                     )
                 } else {
                     List {
-                            Section {
-                                HStack(spacing: 10) {
-                                    Image(systemName: "magnifyingglass")
-                                        .foregroundStyle(.secondary)
-                                    TextField("搜索标题与全文", text: $libraryQueryRaw)
-                                        .textInputAutocapitalization(.never)
-                                        .autocorrectionDisabled(true)
-                                    if !libraryQueryRaw.isEmpty {
-                                        Button {
-                                            libraryQueryRaw = ""
-                                            libraryQuery = ""
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .accessibilityLabel("清除搜索")
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                            .listRowBackground(store.readingPreferences.listRowBackgroundColor)
-
                             if filteredDocuments.isEmpty {
                                 Section {
                                     VStack(spacing: 10) {
@@ -206,6 +222,9 @@ struct LibraryView: View {
                     .background(Color.clear)
                     .listRowBackground(store.readingPreferences.listRowBackgroundColor)
                     .listSectionSpacing(.compact)
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        libraryFloatingSearchBar
+                    }
                 }
                 }
         }
