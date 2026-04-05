@@ -81,6 +81,9 @@ struct LibraryView: View {
         "\(majorId)|\(subId)"
     }
 
+    /// Nav bar compresses `NavigationLink` labels more than plain `Button`; keep both actions equally wide.
+    private var libraryToolbarActionMinWidth: CGFloat { 64 }
+
     var body: some View {
         ZStack {
                 store.readingPreferences.backgroundColor.ignoresSafeArea()
@@ -182,9 +185,10 @@ struct LibraryView: View {
                     } label: {
                         Text("设置")
                             .font(.body)
+                            .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
+                            .contentShape(Rectangle())
                     }
-                    // `.bordered` in the nav bar gets a tight square slot → looks round and clips “设置”.
-                    .fixedSize(horizontal: true, vertical: false)
+                    .buttonStyle(.plain)
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -193,8 +197,10 @@ struct LibraryView: View {
                     } label: {
                         Text("导入")
                             .font(.body)
+                            .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
+                            .contentShape(Rectangle())
                     }
-                    .fixedSize(horizontal: true, vertical: false)
+                    .buttonStyle(.plain)
                 }
             }
             .fileImporter(
