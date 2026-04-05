@@ -335,6 +335,7 @@ struct ReaderView: View {
                         secondaryColor: secondary
                     ))
                     .lineSpacing(store.readingPreferences.lineSpacing)
+                    .ifPoetryLineAccessibility(document.category == .poetry, line: line)
                 }
             }
 
@@ -561,6 +562,22 @@ struct ReaderView: View {
         case let .ordered(items): return String((items.first ?? "").prefix(48))
         case .horizontalRule: return "分隔线"
         case let .noteSection(ls): return String((ls.first ?? "注释").prefix(48))
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func ifPoetryLineAccessibility(_ enabled: Bool, line: String) -> some View {
+        if enabled {
+            let plain = InlineMarkdownFormatter.accessibilityLineDescription(line)
+            if !plain.isEmpty {
+                accessibilityLabel(plain)
+            } else {
+                self
+            }
+        } else {
+            self
         }
     }
 }

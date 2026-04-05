@@ -49,7 +49,6 @@ final class DocumentStore: ObservableObject {
         normalizeDocumentsAfterLoad()
         mergeBundledPoetryIfNeeded()
         mergeBundledAnthologyIfNeeded()
-        TodayQuoteStore.refreshIfNeeded(from: documents)
     }
 
 
@@ -209,7 +208,6 @@ final class DocumentStore: ObservableObject {
 
         documents.sort(by: DocumentItem.displaySort)
         try saveDocuments()
-        TodayQuoteStore.refreshIfNeeded(from: documents)
     }
 
     func deleteDocuments(at offsets: IndexSet) {
@@ -314,7 +312,6 @@ final class DocumentStore: ObservableObject {
         try saveDocuments()
         saveReaderState()
         saveReadingPreferences()
-        TodayQuoteStore.refreshIfNeeded(from: documents)
     }
 
     func progressUTF16Offset(for documentId: UUID) -> Int? {

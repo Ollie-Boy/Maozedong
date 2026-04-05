@@ -84,7 +84,6 @@ struct SettingsPanel: View {
                 defer { if access { url.stopAccessingSecurityScopedResource() } }
                 let data = try Data(contentsOf: url)
                 try store.importBackup(data: data)
-                TodayQuoteStore.refreshIfNeeded(from: store.documents)
                 backupAlert = "已从备份恢复。"
             } catch {
                 backupAlert = "恢复失败：\(error.localizedDescription)"

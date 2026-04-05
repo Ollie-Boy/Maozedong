@@ -163,7 +163,7 @@ struct LibraryView: View {
                 }
                 }
         }
-        .navigationTitle("毛泽东著作")
+        .navigationTitle("学习课本")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)

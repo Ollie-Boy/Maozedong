@@ -1,6 +1,6 @@
-# Maozedong Reader (iPhone)
+# 学习课本（MaozedongReader）
 
-一个基于 **SwiftUI** 的 iPhone 阅读 App 原型，面向“著作阅读”场景。
+一个基于 **SwiftUI** 的 iPhone 阅读 App，主界面与系统桌面显示名 **「学习课本」**（`CFBundleDisplayName`）。
 
 核心目标：
 - 阅读文本（诗词、语录、文章等）
@@ -20,9 +20,8 @@
    - **继续阅读**：顶部入口，进入上次打开的篇目（分页左右滑会更新记录）
    - **阅读主题**：可 **跟随系统**、**夜间自动深色（22:00–07:00）**、**护眼偏暖**；UIKit 外观与阅读页背景同步
    - 有阅读进度时列表显示 **已读** 标记
-   - **App 图标**：`Assets.xcassets/AppIcon.appiconset/AppIcon.png`（来自维基共享资源公有领域肖像 *Mao Zedong 1919.jpg*，经裁剪缩放；分发时请自行核对许可）
+   - **App 图标**：`Assets.xcassets/AppIcon.appiconset/AppIcon.png`（见 `ICON_SOURCE.txt`；`scripts/generate_app_icon.py` 可重生成）
    - 顶部 **搜索**：在标题与正文中全文检索
-   - 可按分组筛选（工具栏「分组」）
    - 左滑删除单篇文档
    - 不再内置示例诗词/文章；书库仅含 **内置诗词语料**、**内置选集** 与用户导入文件（升级后会自动清理旧版示例条目）
 
@@ -35,6 +34,7 @@
    - **书签**：添加、跳转、滑动删除
    - **阅读进度**：按当前可见段落自动保存（UTF-16 偏移），再次打开时恢复位置
    - 一键朗读/停止朗读（`AVSpeechSynthesizer`）
+   - **VoiceOver**：诗词正文每一行段落有独立 **无障碍标签**（朗读为纯文本，去掉 `**` 等标记）
    - 阅读设置（字号、行距、主题、备份）
 
 3. **导入功能**
@@ -49,9 +49,6 @@
 
 5. **备份**
    - 设置中 **导出备份（JSON）** / **从备份恢复**，包含书库、阅读进度、书签与偏好（完全离线文件）
-
-6. **小组件（可选）**
-   - `TodayQuoteStore` 将「今日一句」写入 `UserDefaults`（可选 App Group `group.com.example.MaozedongReader`）。在 Xcode 中 **File → New → Target → Widget Extension** 新建小组件，读取与主应用相同的 `widgetTodayQuoteTitle` / `widgetTodayQuoteLine` 键即可；未加扩展时不影响主应用。
 
 ## 目录结构
 
