@@ -367,15 +367,34 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func rowLabel(_ doc: DocumentItem) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(doc.title)
-                .font(.headline)
-            HStack(spacing: 8) {
-                if doc.category == .poetry, let y = doc.sortEpochYear {
-                    Text(String(format: "%d", y))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        if doc.category == .poetry {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 8) {
+                    Text(doc.title)
+                        .font(.headline)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                    if let y = doc.sortEpochYear {
+                        Text(String(format: "%d", y))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                            .padding(.top, 2)
+                    }
                 }
+                if let progress = store.progressUTF16Offset(for: doc.id), progress > 0 {
+                    Text("已读")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(doc.title)
+                    .font(.headline)
                 if let progress = store.progressUTF16Offset(for: doc.id), progress > 0 {
                     Text("已读")
                         .font(.caption2)
