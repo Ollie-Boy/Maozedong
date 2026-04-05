@@ -105,6 +105,8 @@ struct ReaderView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
+        .toolbarBackground(.visible, for: .bottomBar)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button {
@@ -149,8 +151,12 @@ struct ReaderView: View {
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
                 SettingsPanel(preferences: $store.readingPreferences)
+                    .scrollContentBackground(.hidden)
+                    .background(store.readingPreferences.backgroundColor)
                     .navigationTitle("阅读设置")
                     .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+                    .toolbarBackground(.visible, for: .navigationBar)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("完成") {
@@ -178,8 +184,13 @@ struct ReaderView: View {
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(store.readingPreferences.backgroundColor)
+                .listRowBackground(store.readingPreferences.listRowBackgroundColor)
                 .navigationTitle("目录")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("完成") { showingTOC = false }
@@ -197,6 +208,7 @@ struct ReaderView: View {
                         showingSearch = false
                     }
                 )
+                .environmentObject(store)
             }
         }
         .sheet(isPresented: $showingBookmarks) {
@@ -216,9 +228,11 @@ struct ReaderView: View {
                         store.addBookmark(documentId: document.id, utf16Offset: utf16, label: label)
                     }
                 )
+                .environmentObject(store)
             }
         }
         .onAppear {
+            store.markDocumentOpened(documentId: document.id)
             prepareContent()
         }
         .onChange(of: document.id) { _, _ in
@@ -476,6 +490,7 @@ private struct ReaderSearchSheet: View {
     @Binding var query: String
     var onSelect: (UUID) -> Void
 
+    @EnvironmentObject private var store: DocumentStore
     @Environment(\.dismiss) private var dismiss
 
     private var results: [(block: MarkdownBlock, snippet: String)] {
@@ -517,8 +532,13 @@ private struct ReaderSearchSheet: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(store.readingPreferences.backgroundColor)
+        .listRowBackground(store.readingPreferences.listRowBackgroundColor)
         .navigationTitle("搜索")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("完成") { dismiss() }
@@ -535,6 +555,7 @@ private struct ReaderBookmarksSheet: View {
     var onRemove: ([UUID]) -> Void
     var onAddCurrent: () -> Void
 
+    @EnvironmentObject private var store: DocumentStore
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -570,8 +591,13 @@ private struct ReaderBookmarksSheet: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(store.readingPreferences.backgroundColor)
+        .listRowBackground(store.readingPreferences.listRowBackgroundColor)
         .navigationTitle("书签")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("完成") { dismiss() }

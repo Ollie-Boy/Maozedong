@@ -111,7 +111,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledPoetryVersionKey = "bundledPoetryCorpusVersion"
-    private static let bundledPoetryVersion = "v5-corpus-fix"
+    private static let bundledPoetryVersion = "v6-poetry-md-layout"
 
     private func normalizeDocumentsAfterLoad() {
         guard !isPreviewMode else { return }
@@ -211,10 +211,12 @@ final class DocumentStore: ObservableObject {
     func deleteDocuments(at offsets: IndexSet) {
         let removed = offsets.map { documents[$0] }
         documents.remove(atOffsets: offsets)
+        var next = readerState
         for doc in removed {
-            readerState.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
-            readerState.bookmarks.removeAll { $0.documentId == doc.id }
+            next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
+            next.bookmarks.removeAll { $0.documentId == doc.id }
         }
+        readerState = next
         do {
             try saveDocuments()
             saveReaderState()
@@ -227,8 +229,10 @@ final class DocumentStore: ObservableObject {
         guard let idx = documents.firstIndex(where: { $0.id == id }) else { return }
         let doc = documents[idx]
         documents.remove(at: idx)
-        readerState.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
-        readerState.bookmarks.removeAll { $0.documentId == doc.id }
+        var next = readerState
+        next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
+        next.bookmarks.removeAll { $0.documentId == doc.id }
+        readerState = next
         do {
             try saveDocuments()
             saveReaderState()
@@ -252,8 +256,17 @@ final class DocumentStore: ObservableObject {
 
     func setReadingProgress(documentId: UUID, utf16Offset: Int) {
         guard !isPreviewMode else { return }
-        readerState.progressUTF16ByDocumentId[documentId] = max(0, utf16Offset)
+        var next = readerState
+        next.progressUTF16ByDocumentId[documentId] = max(0, utf16Offset)
+        readerState = next
         saveReaderState()
+    }
+
+    /// Marks a document as opened so the library can show「已读」even before scroll metrics fire.
+    func markDocumentOpened(documentId: UUID) {
+        guard !isPreviewMode else { return }
+        if readerState.progressUTF16ByDocumentId[documentId] != nil { return }
+        setReadingProgress(documentId: documentId, utf16Offset: 0)
     }
 
     func progressUTF16Offset(for documentId: UUID) -> Int? {
@@ -263,14 +276,18 @@ final class DocumentStore: ObservableObject {
     func addBookmark(documentId: UUID, utf16Offset: Int, label: String) {
         guard !isPreviewMode else { return }
         let entry = BookmarkEntry(documentId: documentId, utf16Offset: max(0, utf16Offset), label: label)
-        readerState.bookmarks.insert(entry, at: 0)
+        var next = readerState
+        next.bookmarks.insert(entry, at: 0)
+        readerState = next
         saveReaderState()
     }
 
     func removeBookmarks(ids: [UUID]) {
         guard !isPreviewMode else { return }
         let idSet = Set(ids)
-        readerState.bookmarks.removeAll { idSet.contains($0.id) }
+        var next = readerState
+        next.bookmarks.removeAll { idSet.contains($0.id) }
+        readerState = next
         saveReaderState()
     }
 

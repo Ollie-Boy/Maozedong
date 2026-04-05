@@ -84,7 +84,9 @@ struct LibraryView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                store.readingPreferences.backgroundColor.ignoresSafeArea()
+                Group {
                 if store.documents.isEmpty {
                     ContentUnavailableView(
                         "暂无内容",
@@ -142,9 +144,15 @@ struct LibraryView: View {
                         }
                     }
                     .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .listRowBackground(store.readingPreferences.listRowBackgroundColor)
+                }
                 }
             }
             .navigationTitle("毛泽东著作")
+            .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -163,6 +171,12 @@ struct LibraryView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink("设置") {
                         SettingsPanel(preferences: $store.readingPreferences)
+                            .scrollContentBackground(.hidden)
+                            .background(store.readingPreferences.backgroundColor)
+                            .navigationTitle("阅读设置")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+                            .toolbarBackground(.visible, for: .navigationBar)
                     }
                 }
 

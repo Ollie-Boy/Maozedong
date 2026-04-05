@@ -32,9 +32,18 @@ struct PoetryReaderPager: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
+        .background(store.readingPreferences.backgroundColor.ignoresSafeArea())
         .navigationTitle(currentTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
+        .toolbarBackground(.visible, for: .bottomBar)
+        .onAppear {
+            store.markDocumentOpened(documentId: selectionId)
+        }
+        .onChange(of: selectionId) { _, id in
+            store.markDocumentOpened(documentId: id)
+        }
     }
 }
