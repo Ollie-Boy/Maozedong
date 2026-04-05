@@ -52,61 +52,56 @@ struct ReaderView: View {
         let blocks = displayBlocks
         let headings = tocEntries(from: blocks)
 
-        Group {
-            if presentsNavigationChrome {
-                readerScrollRoot(blocks: blocks)
-                    .navigationTitle(document.title)
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
-                    .toolbarBackground(.visible, for: .navigationBar)
-                    .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
-                    .toolbarBackground(.visible, for: .bottomBar)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .topBarTrailing) {
-                            Button {
-                                showingTOC = true
-                            } label: {
-                                Label("目录", systemImage: "list.bullet")
-                            }
-                            .disabled(headings.isEmpty)
+        readerScrollRoot(blocks: blocks)
+            .modifier(ReaderBarTitleModifier(title: document.title, useToolbarPrincipal: !presentsNavigationChrome))
+            .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(store.readingPreferences.backgroundColor, for: .bottomBar)
+            .toolbarBackground(.visible, for: .bottomBar)
+            .toolbar {
+                if presentsNavigationChrome {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button {
+                            showingTOC = true
+                        } label: {
+                            Label("目录", systemImage: "list.bullet")
+                        }
+                        .disabled(headings.isEmpty)
 
-                            Button {
-                                searchQuery = ""
-                                showingSearch = true
-                            } label: {
-                                Label("搜索", systemImage: "magnifyingglass")
-                            }
+                        Button {
+                            searchQuery = ""
+                            showingSearch = true
+                        } label: {
+                            Label("搜索", systemImage: "magnifyingglass")
+                        }
 
-                            Button {
-                                showingBookmarks = true
-                            } label: {
-                                Label("书签", systemImage: "bookmark")
-                            }
+                        Button {
+                            showingBookmarks = true
+                        } label: {
+                            Label("书签", systemImage: "bookmark")
+                        }
 
-                            Button {
-                                if speechService.isSpeaking {
-                                    speechService.stop()
-                                } else {
-                                    speechService.speak(speechPlainText)
-                                }
-                            } label: {
-                                Label(
-                                    speechService.isSpeaking ? "停止朗读" : "朗读",
-                                    systemImage: speechService.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
-                                )
+                        Button {
+                            if speechService.isSpeaking {
+                                speechService.stop()
+                            } else {
+                                speechService.speak(speechPlainText)
                             }
+                        } label: {
+                            Label(
+                                speechService.isSpeaking ? "停止朗读" : "朗读",
+                                systemImage: speechService.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
+                            )
+                        }
 
-                            Button {
-                                showingSettings = true
-                            } label: {
-                                Label("阅读设置", systemImage: "textformat.size")
-                            }
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Label("阅读设置", systemImage: "textformat.size")
                         }
                     }
-            } else {
-                readerScrollRoot(blocks: blocks)
+                }
             }
-        }
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
                 SettingsPanel(preferences: $store.readingPreferences)
@@ -566,6 +561,34 @@ struct ReaderView: View {
         case let .ordered(items): return String((items.first ?? "").prefix(48))
         case .horizontalRule: return "分隔线"
         case let .noteSection(ls): return String((ls.first ?? "注释").prefix(48))
+        }
+    }
+}
+
+/// iOS 18+ can show a transient empty nav bar / overlay when `navigationTitle` is empty during pager transitions.
+/// Pager siblings use a single-space system title plus a custom `.principal` title (see commit 466fc85).
+private struct ReaderBarTitleModifier: ViewModifier {
+    let title: String
+    let useToolbarPrincipal: Bool
+    @EnvironmentObject private var store: DocumentStore
+
+    func body(content: Content) -> some View {
+        if useToolbarPrincipal {
+            content
+                .navigationTitle(" ")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text(title)
+                            .font(.headline)
+                            .foregroundStyle(store.readingPreferences.textColor)
+                            .lineLimit(1)
+                    }
+                }
+        } else {
+            content
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
