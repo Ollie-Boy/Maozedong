@@ -220,8 +220,6 @@ final class DocumentStore: ObservableObject {
         var next = readerState
         for doc in removed {
             next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
-            next.bookmarks.removeAll { $0.documentId == doc.id }
-            next.textSnippets.removeAll { $0.documentId == doc.id }
             next.readingSecondsByDocumentId.removeValue(forKey: doc.id)
             if next.lastOpenedDocumentId == doc.id {
                 next.lastOpenedDocumentId = nil
@@ -243,8 +241,6 @@ final class DocumentStore: ObservableObject {
         documents.remove(at: idx)
         var next = readerState
         next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
-        next.bookmarks.removeAll { $0.documentId == doc.id }
-        next.textSnippets.removeAll { $0.documentId == doc.id }
         next.readingSecondsByDocumentId.removeValue(forKey: doc.id)
         if next.lastOpenedDocumentId == doc.id {
             next.lastOpenedDocumentId = nil
@@ -324,62 +320,6 @@ final class DocumentStore: ObservableObject {
 
     func progressUTF16Offset(for documentId: UUID) -> Int? {
         readerState.progressUTF16ByDocumentId[documentId]
-    }
-
-    func addBookmark(documentId: UUID, utf16Offset: Int, label: String) {
-        guard !isPreviewMode else { return }
-        let entry = BookmarkEntry(documentId: documentId, utf16Offset: max(0, utf16Offset), label: label)
-        var next = readerState
-        next.bookmarks.insert(entry, at: 0)
-        readerState = next
-        saveReaderState()
-    }
-
-    func removeBookmarks(ids: [UUID]) {
-        guard !isPreviewMode else { return }
-        let idSet = Set(ids)
-        var next = readerState
-        next.bookmarks.removeAll { idSet.contains($0.id) }
-        readerState = next
-        saveReaderState()
-    }
-
-    func bookmarks(for documentId: UUID) -> [BookmarkEntry] {
-        readerState.bookmarks.filter { $0.documentId == documentId }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    func textSnippets(for documentId: UUID) -> [TextSnippetEntry] {
-        readerState.textSnippets.filter { $0.documentId == documentId }
-            .sorted { $0.createdAt > $1.createdAt }
-    }
-
-    func addTextSnippet(documentId: UUID, utf16Start: Int, utf16End: Int, excerpt: String, note: String?) {
-        guard !isPreviewMode else { return }
-        let s = max(0, utf16Start)
-        let e = max(s, utf16End)
-        let trimmed = excerpt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        let entry = TextSnippetEntry(
-            documentId: documentId,
-            utf16Start: s,
-            utf16End: e,
-            excerpt: String(trimmed.prefix(500)),
-            note: note.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : String($0.prefix(2000)) }
-        )
-        var next = readerState
-        next.textSnippets.insert(entry, at: 0)
-        readerState = next
-        saveReaderState()
-    }
-
-    func removeTextSnippets(ids: [UUID]) {
-        guard !isPreviewMode else { return }
-        let idSet = Set(ids)
-        var next = readerState
-        next.textSnippets.removeAll { idSet.contains($0.id) }
-        readerState = next
-        saveReaderState()
     }
 
     /// Call when a reader page becomes the visible pager page (or returns from background).
