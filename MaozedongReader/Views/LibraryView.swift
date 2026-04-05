@@ -109,13 +109,14 @@ struct LibraryView: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            // Match navigation bar text controls (设置 / 导入): system-style continuous capsule.
+            Capsule(style: .continuous)
                 .fill(.ultraThinMaterial)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            Capsule(style: .continuous)
                 .strokeBorder(store.readingPreferences.textColor.opacity(0.12), lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 6)
