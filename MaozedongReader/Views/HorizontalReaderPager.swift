@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Three fixed slots `[prev?, current, next?]` so `scrollPosition` ids stay `0,1,2` while only **three**
-/// `ReaderView`s exist. After a swipe to an adjacent slot, the reel rotates and scroll snaps back to center
-/// without animation (avoids the broken “sliding window of documents” that made `scrollPosition(id: UUID)` jump many pages).
+/// `ReaderView`s exist. After a real page change, the reel updates and the scroll eases back to center with a
+/// spring (e.g. book-like settle); first/last edge bounce still snaps instantly.
 struct HorizontalReaderPager: View {
     let documents: [DocumentItem]
     @Binding var selectionId: UUID
@@ -54,13 +54,21 @@ struct HorizontalReaderPager: View {
             orderedIds[newIdx],
             newIdx < n - 1 ? orderedIds[newIdx + 1] : nil
         ]
-        snapToCenterWithoutAnimation()
+        snapToCenterWithPageTurnAnimation()
     }
 
+    /// Instant reset when bouncing at first/last article (no “fake” page turn).
     private func snapToCenterWithoutAnimation() {
         var t = Transaction()
         t.disablesAnimations = true
         withTransaction(t) {
+            focusedSlot = 1
+        }
+    }
+
+    /// After a real page change, ease back to the middle slot like turning a page (was instant before).
+    private func snapToCenterWithPageTurnAnimation() {
+        withAnimation(.spring(response: 0.52, dampingFraction: 0.86, blendDuration: 0.2)) {
             focusedSlot = 1
         }
     }
