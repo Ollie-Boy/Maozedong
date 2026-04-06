@@ -16,29 +16,15 @@ struct LibraryView: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var path: NavigationPath
     @State private var showImporter = false
-    /// Bound to `.searchable`; updates every keystroke.
-    @State private var libraryQueryRaw = ""
-    /// Debounced copy used for filtering — scanning every document `content` on each key is main-thread heavy and janks the keyboard.
-    @State private var libraryFilterQuery = ""
-    @State private var librarySearchDebounceTask: Task<Void, Never>?
+    @State private var showLibrarySearch = false
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
     @State private var collapsedAnthologyMajors: Set<Int> = []
     @State private var collapsedAnthologySubsections: Set<String> = []
     @State private var showLibrarySettings = false
 
-    private var filteredDocuments: [DocumentItem] {
-        let q = libraryFilterQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return store.documents }
-        let opts: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
-        return store.documents.filter { doc in
-            if doc.title.range(of: q, options: opts) != nil { return true }
-            return doc.textForLibrarySearch.range(of: q, options: opts) != nil
-        }
-    }
-
     private func sortedInCategory(_ cat: DocumentCategory) -> [DocumentItem] {
-        filteredDocuments.filter { $0.category == cat }.sorted(by: DocumentItem.displaySort)
+        store.documents.filter { $0.category == cat }.sorted(by: DocumentItem.displaySort)
     }
 
     private func anthologyMajorGroups(from items: [DocumentItem]) -> [AnthologyMajorGroup] {
@@ -99,12 +85,6 @@ struct LibraryView: View {
                         "暂无内容",
                         systemImage: "book.closed",
                         description: Text("点击右上角“导入”来添加 txt 或 md 文件。")
-                    )
-                } else if filteredDocuments.isEmpty {
-                    ContentUnavailableView(
-                        "无匹配结果",
-                        systemImage: "magnifyingglass",
-                        description: Text("试试其他关键词。")
                     )
                 } else {
                     List {
@@ -176,37 +156,18 @@ struct LibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .searchable(text: $libraryQueryRaw, prompt: "搜索标题与全文")
-        .onAppear {
-            if libraryFilterQuery.isEmpty, !libraryQueryRaw.isEmpty {
-                libraryFilterQuery = libraryQueryRaw
-            }
-        }
-        .onChange(of: libraryQueryRaw) { _, newValue in
-            librarySearchDebounceTask?.cancel()
-            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty {
-                libraryFilterQuery = ""
-                return
-            }
-            librarySearchDebounceTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 300_000_000)
-                guard !Task.isCancelled else { return }
-                libraryFilterQuery = newValue
-            }
-        }
-        .onChange(of: store.documents.count) { _, _ in
-            // Keep list coherent after import without waiting for debounce.
-            if libraryQueryRaw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                libraryFilterQuery = ""
-            }
-        }
-        .onDisappear {
-            librarySearchDebounceTask?.cancel()
-        }
         .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    // Sheet avoids NavigationLink + `.searchable` (UISearchController) fighting for bar taps on some iOS versions.
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    Button {
+                        showLibrarySearch = true
+                    } label: {
+                        Text("搜索")
+                            .font(.body)
+                            .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
                     Button {
                         showLibrarySettings = true
                     } label: {
@@ -229,6 +190,10 @@ struct LibraryView: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+            .sheet(isPresented: $showLibrarySearch) {
+                LibraryFullSearchView(path: $path, isPresented: $showLibrarySearch)
+                    .environmentObject(store)
             }
             .sheet(isPresented: $showLibrarySettings) {
                 NavigationStack {
@@ -478,6 +443,129 @@ private struct CollapsibleLibrarySection<Row: View>: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+}
+
+// MARK: - Full-screen search (avoids `.searchable` embedding UISearchController in a huge nested List)
+
+struct LibraryFullSearchView: View {
+    @EnvironmentObject private var store: DocumentStore
+    @Binding var path: NavigationPath
+    @Binding var isPresented: Bool
+
+    @State private var query = ""
+    @State private var matchedIds: [UUID] = []
+    @State private var isSearching = false
+    @State private var searchGeneration = 0
+    @State private var debounceTask: Task<Void, Never>?
+
+    private var orderedMatches: [DocumentItem] {
+        let byId = Dictionary(uniqueKeysWithValues: store.documents.map { ($0.id, $0) })
+        return matchedIds.compactMap { byId[$0] }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    TextField("搜索标题与正文摘要", text: $query)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                }
+                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("输入关键词；匹配标题与正文前段。大库会分片搜索，避免长时间卡住界面。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if isSearching {
+                    HStack {
+                        ProgressView()
+                        Text("搜索中…")
+                            .foregroundStyle(.secondary)
+                    }
+                } else if matchedIds.isEmpty {
+                    Text("无匹配结果")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(orderedMatches) { doc in
+                        Button {
+                            isPresented = false
+                            if doc.category == .poetry {
+                                path.append(LibraryRoute.poetry(doc.id))
+                            } else {
+                                path.append(LibraryRoute.anthology(doc.id))
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(doc.title)
+                                    .font(.headline)
+                                if doc.category == .poetry, let y = doc.sortEpochYear {
+                                    Text(String(y))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(store.readingPreferences.backgroundColor)
+            .listRowBackground(store.readingPreferences.listRowBackgroundColor)
+            .navigationTitle("搜索")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") {
+                        debounceTask?.cancel()
+                        isPresented = false
+                    }
+                }
+            }
+            .onChange(of: query) { _, newValue in
+                scheduleSearch(for: newValue)
+            }
+            .onDisappear {
+                debounceTask?.cancel()
+            }
+        }
+    }
+
+    private func scheduleSearch(for raw: String) {
+        debounceTask?.cancel()
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            matchedIds = []
+            isSearching = false
+            return
+        }
+        isSearching = true
+        searchGeneration += 1
+        let generation = searchGeneration
+        let needle = raw
+        debounceTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 280_000_000)
+            guard !Task.isCancelled else { return }
+            let opts: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+            var found: [UUID] = []
+            for (idx, doc) in store.documents.enumerated() {
+                if idx % 6 == 0 {
+                    await Task.yield()
+                    if Task.isCancelled || generation != searchGeneration { return }
+                }
+                if doc.title.range(of: needle, options: opts) != nil {
+                    found.append(doc.id)
+                    continue
+                }
+                if doc.textForLibrarySearch.range(of: needle, options: opts) != nil {
+                    found.append(doc.id)
+                }
+            }
+            guard generation == searchGeneration else { return }
+            matchedIds = found
+            isSearching = false
         }
     }
 }

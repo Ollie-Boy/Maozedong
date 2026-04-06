@@ -40,7 +40,8 @@ final class DocumentStore: ObservableObject {
 
     /// Bodies at or above this UTF-8 size are stored in `ArticleBodies/{uuid}.txt`; JSON keeps metadata + preview only.
     private static let articleBodyExternalThreshold = 40 * 1024
-    private static let articleBodyPreviewMaxChars = 96_000
+    /// Kept moderate: hundreds of externalized articles × preview still sits in `documents.json` in RAM.
+    private static let articleBodyPreviewMaxChars = 24_000
 
     private var readingPreferencesURL: URL {
         documentsDirectory.appendingPathComponent(readingPreferencesFileName)
@@ -459,6 +460,7 @@ final class DocumentStore: ObservableObject {
             let data = try Data(contentsOf: documentsMetadataURL)
             documents = try JSONDecoder().decode([DocumentItem].self, from: data)
             try migrateInMemoryLargeBodiesToExternalFiles()
+            trimOversizedContentPreviewsIfNeeded()
         } catch {
             documents = []
             errorMessage = "读取文档列表失败：\(error.localizedDescription)"
@@ -480,6 +482,20 @@ final class DocumentStore: ObservableObject {
             .appendingPathComponent("ArticleBodies", isDirectory: true)
         let url = dir.appendingPathComponent("\(id.uuidString).txt")
         return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+    }
+
+    private func trimOversizedContentPreviewsIfNeeded() {
+        var changed = false
+        for i in documents.indices {
+            guard documents[i].contentExternalized,
+                  let p = documents[i].contentPreview,
+                  p.count > Self.articleBodyPreviewMaxChars else { continue }
+            documents[i].contentPreview = String(p.prefix(Self.articleBodyPreviewMaxChars))
+            changed = true
+        }
+        if changed {
+            try? saveDocuments()
+        }
     }
 
     private func migrateInMemoryLargeBodiesToExternalFiles() throws {

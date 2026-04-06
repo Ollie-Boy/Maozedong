@@ -28,11 +28,7 @@ enum AppAppearanceUIKit {
         UISearchBar.appearance().tintColor = label
         UISearchBar.appearance().barTintColor = bg
 
-        // Rounder search field “capsule” inside `.searchable` (SwiftUI hosts UISearchBar).
-        let searchField = UITextField.appearance(whenContainedInInstancesOf: [UISearchBar.self])
-        searchField.borderStyle = .roundedRect
-        searchField.layer.cornerRadius = 22
-        searchField.layer.masksToBounds = true
+        // Do not customize UITextField inside UISearchBar (layout cost + past iOS crashes with UIAppearance).
 
         // Do not use UISearchTextField.appearance(...): setSpellCheckingType / backgroundColor etc.
         // crash on newer iOS when applied via UIAppearance (SwiftUI .searchable).
