@@ -477,7 +477,7 @@ final class DocumentStore: ObservableObject {
     }
 
     /// Read externalized body off the main actor (same path as `resolvedBody`).
-    static func readExternalizedBodyInBackground(id: UUID) -> String {
+    nonisolated static func readExternalizedBodyInBackground(id: UUID) -> String {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ArticleBodies", isDirectory: true)
         let url = dir.appendingPathComponent("\(id.uuidString).txt")
