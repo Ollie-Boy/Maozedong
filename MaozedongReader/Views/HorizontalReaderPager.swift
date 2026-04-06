@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// Three fixed slots `[prev?, current, next?]` so `scrollPosition` ids stay `0,1,2` while only **three**
-/// `ReaderView`s exist. After a real page change, the reel updates and the scroll eases back to center with a
-/// spring (e.g. book-like settle); first/last edge bounce still snaps instantly.
+/// Three-column strip with **finger-driven horizontal offset** (ebook-style): drag shows the next/prev page moving in;
+/// release completes past ~20% width, a distance threshold, or a quick flick; otherwise eases back to center.
 struct HorizontalReaderPager: View {
     let documents: [DocumentItem]
     @Binding var selectionId: UUID
@@ -11,7 +10,10 @@ struct HorizontalReaderPager: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var reelSlots: [UUID?] = [nil, nil, nil]
-    @State private var focusedSlot: Int = 1
+    /// Added to resting offset `-pageWidth` so the strip follows the finger during a horizontal drag.
+    @State private var dragTranslation: CGFloat = 0
+    @State private var horizontalDragActive = false
+    @State private var dragStartX: CGFloat = 0
 
     private func document(for id: UUID?) -> DocumentItem? {
         guard let id else { return nil }
@@ -28,25 +30,9 @@ struct HorizontalReaderPager: View {
         ]
     }
 
-    private func commitReelNavigation(from slot: Int) {
-        guard let centerIdx = orderedIds.firstIndex(of: selectionId) else { return }
-        var newIdx = centerIdx
-        if slot == 0 {
-            guard centerIdx > 0 else {
-                snapToCenterWithoutAnimation()
-                return
-            }
-            newIdx = centerIdx - 1
-        } else if slot == 2 {
-            guard centerIdx < orderedIds.count - 1 else {
-                snapToCenterWithoutAnimation()
-                return
-            }
-            newIdx = centerIdx + 1
-        } else {
-            return
-        }
-
+    private func commitToPreviousPage() {
+        guard let centerIdx = orderedIds.firstIndex(of: selectionId), centerIdx > 0 else { return }
+        let newIdx = centerIdx - 1
         selectionId = orderedIds[newIdx]
         let n = orderedIds.count
         reelSlots = [
@@ -54,23 +40,32 @@ struct HorizontalReaderPager: View {
             orderedIds[newIdx],
             newIdx < n - 1 ? orderedIds[newIdx + 1] : nil
         ]
-        snapToCenterWithPageTurnAnimation()
     }
 
-    /// Instant reset when bouncing at first/last article (no “fake” page turn).
-    private func snapToCenterWithoutAnimation() {
-        var t = Transaction()
-        t.disablesAnimations = true
-        withTransaction(t) {
-            focusedSlot = 1
-        }
+    private func commitToNextPage() {
+        guard let centerIdx = orderedIds.firstIndex(of: selectionId), centerIdx < orderedIds.count - 1 else { return }
+        let newIdx = centerIdx + 1
+        selectionId = orderedIds[newIdx]
+        let n = orderedIds.count
+        reelSlots = [
+            newIdx > 0 ? orderedIds[newIdx - 1] : nil,
+            orderedIds[newIdx],
+            newIdx < n - 1 ? orderedIds[newIdx + 1] : nil
+        ]
     }
 
-    /// After a real page change, ease back to the middle slot like turning a page (was instant before).
-    private func snapToCenterWithPageTurnAnimation() {
-        withAnimation(.spring(response: 0.52, dampingFraction: 0.86, blendDuration: 0.2)) {
-            focusedSlot = 1
+    @ViewBuilder
+    private func slotView(slot: Int, width: CGFloat) -> some View {
+        Group {
+            if let doc = document(for: reelSlots[slot]) {
+                ReaderView(document: doc, presentsNavigationChrome: slot == 1)
+                    .id(doc.id)
+            } else {
+                Color.clear
+            }
         }
+        .frame(width: width)
+        .frame(maxHeight: .infinity)
     }
 
     var body: some View {
@@ -78,48 +73,109 @@ struct HorizontalReaderPager: View {
             if documents.isEmpty {
                 Color.clear
             } else {
-                ScrollView(.horizontal) {
-                    LazyHStack(spacing: 0) {
-                        ForEach(0 ..< 3, id: \.self) { slot in
-                            Group {
-                                if let doc = document(for: reelSlots[slot]) {
-                                    ReaderView(document: doc, presentsNavigationChrome: slot == 1)
-                                        .id(doc.id)
+                GeometryReader { geo in
+                    let W = max(geo.size.width, 1)
+                    let H = geo.size.height
+                    let idx = orderedIds.firstIndex(of: selectionId)
+                    let hasPrev = (idx ?? 0) > 0
+                    let hasNext = idx.map { $0 < orderedIds.count - 1 } ?? false
+                    let restingOffset = -W
+                    let rawOffset = restingOffset + dragTranslation
+                    let minOffset = hasNext ? -2 * W : -W
+                    let maxOffset = hasPrev ? 0 : -W
+                    let clampedOffset = min(max(rawOffset, minOffset), maxOffset)
+                    let progress = (clampedOffset + W) / W
+
+                    HStack(spacing: 0) {
+                        slotView(slot: 0, width: W)
+                        slotView(slot: 1, width: W)
+                        slotView(slot: 2, width: W)
+                    }
+                    .frame(width: 3 * W, alignment: .leading)
+                    .offset(x: clampedOffset)
+                    .frame(width: W, height: H, alignment: .leading)
+                    .clipped()
+                    .contentShape(Rectangle())
+                    // Run alongside inner vertical ScrollView: only after we lock horizontal does translation drive the strip.
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                            .onChanged { value in
+                                let t = value.translation
+                                if !horizontalDragActive {
+                                    if hypot(t.width, t.height) < 12 { return }
+                                    if abs(t.width) < abs(t.height) * 1.12 { return }
+                                    horizontalDragActive = true
+                                    dragStartX = value.startLocation.x
+                                }
+                                guard horizontalDragActive else { return }
+                                dragTranslation = t.width
+                            }
+                            .onEnded { value in
+                                defer {
+                                    horizontalDragActive = false
+                                }
+                                guard horizontalDragActive else {
+                                    dragTranslation = 0
+                                    return
+                                }
+
+                                let t = value.translation.width
+                                let flickExtra = value.predictedEndTranslation.width - t
+
+                                let goNext = hasNext && (progress < -0.2 || t < -56 || flickExtra < -100)
+                                let goPrev = hasPrev && (progress > 0.2 || t > 56 || flickExtra > 100)
+
+                                if goNext && !goPrev {
+                                    withAnimation(.easeOut(duration: 0.28)) {
+                                        dragTranslation = -W
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.29) {
+                                        commitToNextPage()
+                                        var tr = Transaction()
+                                        tr.disablesAnimations = true
+                                        withTransaction(tr) {
+                                            dragTranslation = 0
+                                        }
+                                    }
+                                } else if goPrev && !goNext {
+                                    withAnimation(.easeOut(duration: 0.28)) {
+                                        dragTranslation = W
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.29) {
+                                        commitToPreviousPage()
+                                        var tr = Transaction()
+                                        tr.disablesAnimations = true
+                                        withTransaction(tr) {
+                                            dragTranslation = 0
+                                        }
+                                    }
                                 } else {
-                                    Color.clear
+                                    withAnimation(.easeOut(duration: 0.22)) {
+                                        dragTranslation = 0
+                                    }
+                                    let isLast = orderedIds.last == selectionId
+                                    if isLast, !hasNext, dragStartX > W * 0.42, t < -64 {
+                                        if let onRequestPop {
+                                            onRequestPop()
+                                        } else {
+                                            dismiss()
+                                        }
+                                    }
                                 }
                             }
-                            .containerRelativeFrame(.horizontal)
-                            .id(slot)
-                        }
-                    }
-                    .scrollTargetLayout()
+                    )
                 }
-                .scrollTargetBehavior(.paging)
-                .scrollBounceBehavior(.basedOnSize)
-                .scrollPosition(id: Binding(
-                    get: { focusedSlot },
-                    set: { if let s = $0 { focusedSlot = s } }
-                ))
-                .onAppear {
-                    syncReelToSelection()
-                    focusedSlot = 1
-                }
-                .onChange(of: selectionId) { _, _ in
-                    syncReelToSelection()
-                    snapToCenterWithoutAnimation()
-                }
-                .onChange(of: focusedSlot) { _, newSlot in
-                    guard newSlot != 1 else { return }
-                    commitReelNavigation(from: newSlot)
-                }
-                .modifier(PagerBoundaryPopModifier(orderedIds: orderedIds, selection: $selectionId, onPop: {
-                    if let onRequestPop {
-                        onRequestPop()
-                    } else {
-                        dismiss()
-                    }
-                }))
+            }
+        }
+        .onAppear {
+            syncReelToSelection()
+        }
+        .onChange(of: selectionId) { _, _ in
+            syncReelToSelection()
+            var tr = Transaction()
+            tr.disablesAnimations = true
+            withTransaction(tr) {
+                dragTranslation = 0
             }
         }
     }
