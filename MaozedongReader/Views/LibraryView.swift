@@ -33,7 +33,7 @@ struct LibraryView: View {
         let opts: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
         return store.documents.filter { doc in
             if doc.title.range(of: q, options: opts) != nil { return true }
-            return doc.content.range(of: q, options: opts) != nil
+            return doc.textForLibrarySearch.range(of: q, options: opts) != nil
         }
     }
 

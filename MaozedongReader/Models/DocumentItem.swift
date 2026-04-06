@@ -3,7 +3,12 @@ import Foundation
 struct DocumentItem: Identifiable, Codable, Hashable {
     let id: UUID
     var title: String
+    /// Full body when `!contentExternalized`. When externalized, load from disk via `DocumentStore.resolvedBody(for:)`.
     var content: String
+    /// Large bodies are stored in `ArticleBodies/{id}.txt` to keep `documents.json` small (avoids OOM on launch).
+    var contentExternalized: Bool
+    /// Prefix of body for list search / markdown heuristics when full `content` is not in memory.
+    var contentPreview: String?
     var sourceFileName: String?
     var category: DocumentCategory
     /// Rough calendar fields for chronological sort (from corpus date line).
@@ -22,7 +27,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
     var updatedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, title, content, sourceFileName, category
+        case id, title, content, contentExternalized, contentPreview, sourceFileName, category
         case sortEpochYear, sortEpochMonth, sortEpochDay, sortCorpusIndex
         case anthologySectionTitle, anthologyMajorTitle, anthologyMajorOrder, anthologySubOrder
         case createdAt, updatedAt
@@ -32,6 +37,8 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         id: UUID = UUID(),
         title: String,
         content: String,
+        contentExternalized: Bool = false,
+        contentPreview: String? = nil,
         sourceFileName: String? = nil,
         category: DocumentCategory = .anthology,
         sortEpochYear: Int? = nil,
@@ -48,6 +55,8 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         self.id = id
         self.title = title
         self.content = content
+        self.contentExternalized = contentExternalized
+        self.contentPreview = contentPreview
         self.sourceFileName = sourceFileName
         self.category = category
         self.sortEpochYear = sortEpochYear
@@ -67,6 +76,8 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         id = try c.decode(UUID.self, forKey: .id)
         title = try c.decode(String.self, forKey: .title)
         content = try c.decode(String.self, forKey: .content)
+        contentExternalized = try c.decodeIfPresent(Bool.self, forKey: .contentExternalized) ?? false
+        contentPreview = try c.decodeIfPresent(String.self, forKey: .contentPreview)
         sourceFileName = try c.decodeIfPresent(String.self, forKey: .sourceFileName)
         sortEpochYear = try c.decodeIfPresent(Int.self, forKey: .sortEpochYear)
         sortEpochMonth = try c.decodeIfPresent(Int.self, forKey: .sortEpochMonth)
@@ -93,6 +104,27 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         updatedAt = try c.decode(Date.self, forKey: .updatedAt)
     }
 
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(content, forKey: .content)
+        try c.encode(contentExternalized, forKey: .contentExternalized)
+        try c.encodeIfPresent(contentPreview, forKey: .contentPreview)
+        try c.encodeIfPresent(sourceFileName, forKey: .sourceFileName)
+        try c.encode(category, forKey: .category)
+        try c.encodeIfPresent(sortEpochYear, forKey: .sortEpochYear)
+        try c.encodeIfPresent(sortEpochMonth, forKey: .sortEpochMonth)
+        try c.encodeIfPresent(sortEpochDay, forKey: .sortEpochDay)
+        try c.encodeIfPresent(sortCorpusIndex, forKey: .sortCorpusIndex)
+        try c.encodeIfPresent(anthologySectionTitle, forKey: .anthologySectionTitle)
+        try c.encodeIfPresent(anthologyMajorTitle, forKey: .anthologyMajorTitle)
+        try c.encodeIfPresent(anthologyMajorOrder, forKey: .anthologyMajorOrder)
+        try c.encodeIfPresent(anthologySubOrder, forKey: .anthologySubOrder)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(updatedAt, forKey: .updatedAt)
+    }
+
     /// Pager groups bundled anthology articles by volume/period from the TOC.
     var anthologyScrollGroupKey: String {
         guard category == .anthology,
@@ -101,6 +133,14 @@ struct DocumentItem: Identifiable, Codable, Hashable {
             return "anthology:\(id.uuidString)"
         }
         return "bundledAnthology:\(m):\(s)"
+    }
+
+    /// Text used for library search when full body is externalized (prefix + title still searched via `title` separately).
+    var textForLibrarySearch: String {
+        if contentExternalized {
+            return contentPreview ?? ""
+        }
+        return content
     }
 
     var contentNormalized: String {
@@ -116,7 +156,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
 
     var isLikelyMarkdown: Bool {
         if let name = sourceFileName?.lowercased(), name.hasSuffix(".md") { return true }
-        let s = content
+        let s = contentExternalized ? (contentPreview ?? "") : content
         if s.contains("\n# ") || s.contains("\n## ") { return true }
         if s.hasPrefix("# ") || s.hasPrefix("## ") { return true }
         if s.contains("\n> ") || s.hasPrefix("> ") { return true }
@@ -126,9 +166,11 @@ struct DocumentItem: Identifiable, Codable, Hashable {
     }
 
     /// Fills missing sort fields for poetry loaded before date/index extraction existed.
-    mutating func backfillPoetrySortMetadataFromContentIfNeeded() {
+    /// Pass `resolvedBody` when `content` is empty because the body lives in an external file.
+    mutating func backfillPoetrySortMetadataFromContentIfNeeded(resolvedBody: String? = nil) {
         guard category == .poetry else { return }
-        var body = content
+        var body = resolvedBody ?? content
+        if body.isEmpty, contentExternalized { return }
         if body.hasPrefix("# ") {
             if let nl = body.firstIndex(of: "\n") {
                 body = String(body[body.index(after: nl)...]).trimmingCharacters(in: .whitespacesAndNewlines)

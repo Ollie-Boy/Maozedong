@@ -34,6 +34,14 @@ final class DocumentStore: ObservableObject {
         documentsDirectory.appendingPathComponent(documentsMetadataFileName)
     }
 
+    private var articleBodiesDirectoryURL: URL {
+        documentsDirectory.appendingPathComponent("ArticleBodies", isDirectory: true)
+    }
+
+    /// Bodies at or above this UTF-8 size are stored in `ArticleBodies/{uuid}.txt`; JSON keeps metadata + preview only.
+    private static let articleBodyExternalThreshold = 40 * 1024
+    private static let articleBodyPreviewMaxChars = 96_000
+
     private var readingPreferencesURL: URL {
         documentsDirectory.appendingPathComponent(readingPreferencesFileName)
     }
@@ -132,7 +140,8 @@ final class DocumentStore: ObservableObject {
             let y0 = d.sortEpochYear
             let m0 = d.sortEpochMonth
             let d0 = d.sortEpochDay
-            d.backfillPoetrySortMetadataFromContentIfNeeded()
+            let resolved = (d.category == .poetry && d.content.isEmpty && d.contentExternalized) ? resolvedBody(for: d) : nil
+            d.backfillPoetrySortMetadataFromContentIfNeeded(resolvedBody: resolved)
             if d.sortEpochYear != y0 || d.sortEpochMonth != m0 || d.sortEpochDay != d0 {
                 changed = true
             }
@@ -221,6 +230,10 @@ final class DocumentStore: ObservableObject {
 
     func deleteDocuments(at offsets: IndexSet) {
         let removed = offsets.map { documents[$0] }
+        for doc in removed where doc.contentExternalized {
+            let url = articleBodiesDirectoryURL.appendingPathComponent("\(doc.id.uuidString).txt")
+            try? fileManager.removeItem(at: url)
+        }
         documents.remove(atOffsets: offsets)
         var next = readerState
         for doc in removed {
@@ -242,6 +255,10 @@ final class DocumentStore: ObservableObject {
     func deleteDocument(id: UUID) {
         guard let idx = documents.firstIndex(where: { $0.id == id }) else { return }
         let doc = documents[idx]
+        if doc.contentExternalized {
+            let url = articleBodiesDirectoryURL.appendingPathComponent("\(id.uuidString).txt")
+            try? fileManager.removeItem(at: url)
+        }
         documents.remove(at: idx)
         var next = readerState
         next.progressUTF16ByDocumentId.removeValue(forKey: doc.id)
@@ -262,7 +279,10 @@ final class DocumentStore: ObservableObject {
         guard let idx = documents.firstIndex(where: { $0.id == documentId }) else { return }
         documents[idx].category = category
         documents[idx].updatedAt = Date()
-        documents[idx].backfillPoetrySortMetadataFromContentIfNeeded()
+        let resolved = (documents[idx].category == .poetry && documents[idx].content.isEmpty && documents[idx].contentExternalized)
+            ? resolvedBody(for: documents[idx])
+            : nil
+        documents[idx].backfillPoetrySortMetadataFromContentIfNeeded(resolvedBody: resolved)
         documents.sort(by: DocumentItem.displaySort)
         do {
             try saveDocuments()
@@ -319,10 +339,21 @@ final class DocumentStore: ObservableObject {
         return documents.first { $0.id == id }
     }
 
+    /// Inline externalized bodies so backups restore on a fresh install without `ArticleBodies/`.
+    private func documentForBackup(_ d: DocumentItem) -> DocumentItem {
+        var x = d
+        guard x.contentExternalized else { return x }
+        guard let body = resolvedBody(for: d) else { return x }
+        x.content = body
+        x.contentExternalized = false
+        x.contentPreview = nil
+        return x
+    }
+
     /// Exports `documents.json` + `reader_state.json` + `reading_preferences.json` into one JSON file (offline backup).
     func exportBackupData() throws -> Data {
         let payload = BackupPayload(
-            documents: documents,
+            documents: documents.map(documentForBackup),
             readerState: readerState,
             readingPreferences: readingPreferences,
             exportedAt: Date()
@@ -427,10 +458,82 @@ final class DocumentStore: ObservableObject {
         do {
             let data = try Data(contentsOf: documentsMetadataURL)
             documents = try JSONDecoder().decode([DocumentItem].self, from: data)
+            try migrateInMemoryLargeBodiesToExternalFiles()
         } catch {
             documents = []
             errorMessage = "读取文档列表失败：\(error.localizedDescription)"
         }
+    }
+
+    /// Full article text for reading / export. Inline `content` or UTF-8 file in `ArticleBodies/`.
+    func resolvedBody(for item: DocumentItem) -> String? {
+        if !item.contentExternalized {
+            return item.content
+        }
+        let url = articleBodiesDirectoryURL.appendingPathComponent("\(item.id.uuidString).txt")
+        return try? String(contentsOf: url, encoding: .utf8)
+    }
+
+    /// Read externalized body off the main actor (same path as `resolvedBody`).
+    static func readExternalizedBodyInBackground(id: UUID) -> String {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ArticleBodies", isDirectory: true)
+        let url = dir.appendingPathComponent("\(id.uuidString).txt")
+        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+    }
+
+    private func migrateInMemoryLargeBodiesToExternalFiles() throws {
+        try fileManager.createDirectory(at: articleBodiesDirectoryURL, withIntermediateDirectories: true)
+        var changed = false
+        var next: [DocumentItem] = []
+        next.reserveCapacity(documents.count)
+        for var d in documents {
+            guard !d.contentExternalized else {
+                next.append(d)
+                continue
+            }
+            let byteCount = d.content.lengthOfBytes(using: .utf8)
+            guard byteCount >= Self.articleBodyExternalThreshold else {
+                next.append(d)
+                continue
+            }
+            let url = articleBodiesDirectoryURL.appendingPathComponent("\(d.id.uuidString).txt")
+            try d.content.write(to: url, atomically: true, encoding: .utf8)
+            d.contentPreview = String(d.content.prefix(Self.articleBodyPreviewMaxChars))
+            d.content = ""
+            d.contentExternalized = true
+            changed = true
+            next.append(d)
+        }
+        documents = next
+        if changed {
+            let data = try JSONEncoder().encode(documents)
+            try data.write(to: documentsMetadataURL, options: .atomic)
+        }
+    }
+
+    private func prepareDocumentForPersistence(_ d: inout DocumentItem) throws {
+        if d.contentExternalized {
+            let url = articleBodiesDirectoryURL.appendingPathComponent("\(d.id.uuidString).txt")
+            if !d.content.isEmpty {
+                try fileManager.createDirectory(at: articleBodiesDirectoryURL, withIntermediateDirectories: true)
+                try d.content.write(to: url, atomically: true, encoding: .utf8)
+                d.content = ""
+            }
+            if d.contentPreview == nil, fileManager.fileExists(atPath: url.path),
+               let full = try? String(contentsOf: url, encoding: .utf8) {
+                d.contentPreview = String(full.prefix(Self.articleBodyPreviewMaxChars))
+            }
+            return
+        }
+        let byteCount = d.content.lengthOfBytes(using: .utf8)
+        guard byteCount >= Self.articleBodyExternalThreshold else { return }
+        try fileManager.createDirectory(at: articleBodiesDirectoryURL, withIntermediateDirectories: true)
+        let url = articleBodiesDirectoryURL.appendingPathComponent("\(d.id.uuidString).txt")
+        try d.content.write(to: url, atomically: true, encoding: .utf8)
+        d.contentPreview = String(d.content.prefix(Self.articleBodyPreviewMaxChars))
+        d.content = ""
+        d.contentExternalized = true
     }
 
     private func loadReadingPreferences() {
@@ -469,6 +572,14 @@ final class DocumentStore: ObservableObject {
     }
 
     private func saveDocuments() throws {
+        try fileManager.createDirectory(at: articleBodiesDirectoryURL, withIntermediateDirectories: true)
+        var next: [DocumentItem] = []
+        next.reserveCapacity(documents.count)
+        for var d in documents {
+            try prepareDocumentForPersistence(&d)
+            next.append(d)
+        }
+        documents = next
         let data = try JSONEncoder().encode(documents)
         try data.write(to: documentsMetadataURL, options: .atomic)
     }

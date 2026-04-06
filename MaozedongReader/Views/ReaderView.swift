@@ -48,16 +48,29 @@ struct ReaderView: View {
     @State private var scrollToBlockId: UUID?
     @State private var progressSaveTask: Task<Void, Never>?
     @State private var expandedNoteBlockIds: Set<UUID> = []
+    /// Filled asynchronously when `document.contentExternalized` (body on disk, not in `documents.json`).
+    @State private var loadedBody: String?
 
     private let scrollSpaceName = "readerScroll"
     /// Coalesce hundreds of per-block preference merges while vertically scrolling long articles.
     private static let blockFramesDebounceNs: UInt64 = 90_000_000
 
+    private var readerSourceText: String {
+        document.contentExternalized ? (loadedBody ?? "") : document.content
+    }
+
     var body: some View {
         let blocks = displayBlocks
         let headings = tocEntries(from: blocks)
 
-        readerScrollRoot(blocks: blocks)
+        Group {
+            if document.contentExternalized && loadedBody == nil && presentsNavigationChrome {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                readerScrollRoot(blocks: blocks)
+            }
+        }
             .modifier(ReaderBarTitleModifier(title: document.title, useToolbarPrincipal: !presentsNavigationChrome))
             .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -185,29 +198,40 @@ struct ReaderView: View {
             Text(exportError ?? "")
         }
         .onAppear {
-            prepareContent()
             if presentsNavigationChrome {
                 store.recordLastOpenedDocument(documentId: document.id)
             }
+            loadBodyIfNeeded()
         }
         .onChange(of: presentsNavigationChrome) { _, chrome in
             if chrome {
+                loadBodyIfNeeded()
                 store.recordLastOpenedDocument(documentId: document.id)
             } else {
                 progressSaveTask?.cancel()
                 let b = displayBlocks
                 let utf16 = currentProgressUTF16(blocks: b) ?? store.progressUTF16Offset(for: document.id) ?? 0
                 store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
+                loadedBody = nil
+                cachedBlocks = []
+                plainSegments = []
             }
         }
         .onChange(of: document.id) { _, _ in
             expandedNoteBlockIds = []
             blockFramesDebounceTask?.cancel()
             blockFramesDebounceTask = nil
-            prepareContent()
+            loadedBody = nil
+            if presentsNavigationChrome {
+                loadBodyIfNeeded()
+            } else {
+                prepareContent()
+            }
         }
         .onChange(of: document.content) { _, _ in
-            prepareContent()
+            if !document.contentExternalized {
+                prepareContent()
+            }
         }
         .onDisappear {
             progressSaveTask?.cancel()
@@ -221,7 +245,8 @@ struct ReaderView: View {
     private func exportCurrentDocument() {
         let name = document.title.replacingOccurrences(of: "/", with: "-")
         let base = name.isEmpty ? "export" : name
-        let md = "# \(document.title)\n\n\(document.content)"
+        let body = document.contentExternalized ? (store.resolvedBody(for: document) ?? "") : document.content
+        let md = "# \(document.title)\n\n\(body)"
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(base).md")
         do {
             try md.data(using: .utf8)?.write(to: url, options: .atomic)
@@ -332,14 +357,35 @@ struct ReaderView: View {
         }
     }
 
+    private func loadBodyIfNeeded() {
+        if !document.contentExternalized {
+            prepareContent()
+            return
+        }
+        guard presentsNavigationChrome else { return }
+        if loadedBody != nil {
+            prepareContent()
+            return
+        }
+        let docId = document.id
+        Task { @MainActor in
+            let text = await Task.detached {
+                DocumentStore.readExternalizedBodyInBackground(id: docId)
+            }.value
+            guard docId == document.id else { return }
+            loadedBody = text
+            prepareContent()
+        }
+    }
+
     private func prepareContent() {
         useMarkdown = document.isLikelyMarkdown
         if useMarkdown {
-            cachedBlocks = MarkdownBlockParser.parse(document.content)
+            cachedBlocks = MarkdownBlockParser.parse(readerSourceText)
             plainSegments = []
         } else {
             cachedBlocks = []
-            plainSegments = PlainTextParagraphs.segments(from: document.content)
+            plainSegments = PlainTextParagraphs.segments(from: readerSourceText)
         }
     }
 
@@ -540,11 +586,11 @@ struct ReaderView: View {
     }
 
     private func utf16ForBlock(_ block: MarkdownBlock) -> Int? {
-        block.utf16StartOffset(in: document.content)
+        block.utf16StartOffset(in: readerSourceText)
     }
 
     private func blockContainingUTF16(_ utf16: Int, blocks: [MarkdownBlock]) -> MarkdownBlock? {
-        let source = document.content
+        let source = readerSourceText
         let total = source.utf16.count
         let pairs: [(MarkdownBlock, Int)] = blocks.compactMap { b in
             guard let s = b.utf16StartOffset(in: source) else { return nil }
