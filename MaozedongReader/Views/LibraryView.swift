@@ -16,7 +16,11 @@ struct LibraryView: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var path: NavigationPath
     @State private var showImporter = false
-    @State private var libraryQuery = ""
+    /// Bound to `.searchable`; updates every keystroke.
+    @State private var libraryQueryRaw = ""
+    /// Debounced copy used for filtering — scanning every document `content` on each key is main-thread heavy and janks the keyboard.
+    @State private var libraryFilterQuery = ""
+    @State private var librarySearchDebounceTask: Task<Void, Never>?
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
     @State private var collapsedAnthologyMajors: Set<Int> = []
@@ -24,11 +28,12 @@ struct LibraryView: View {
     @State private var showLibrarySettings = false
 
     private var filteredDocuments: [DocumentItem] {
-        let q = libraryQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let q = libraryFilterQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return store.documents }
+        let opts: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
         return store.documents.filter { doc in
-            guard !q.isEmpty else { return true }
-            if doc.title.localizedCaseInsensitiveContains(q) { return true }
-            return doc.content.localizedCaseInsensitiveContains(q)
+            if doc.title.range(of: q, options: opts) != nil { return true }
+            return doc.content.range(of: q, options: opts) != nil
         }
     }
 
@@ -171,7 +176,34 @@ struct LibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .searchable(text: $libraryQuery, prompt: "搜索标题与全文")
+        .searchable(text: $libraryQueryRaw, prompt: "搜索标题与全文")
+        .onAppear {
+            if libraryFilterQuery.isEmpty, !libraryQueryRaw.isEmpty {
+                libraryFilterQuery = libraryQueryRaw
+            }
+        }
+        .onChange(of: libraryQueryRaw) { _, newValue in
+            librarySearchDebounceTask?.cancel()
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                libraryFilterQuery = ""
+                return
+            }
+            librarySearchDebounceTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                guard !Task.isCancelled else { return }
+                libraryFilterQuery = newValue
+            }
+        }
+        .onChange(of: store.documents.count) { _, _ in
+            // Keep list coherent after import without waiting for debounce.
+            if libraryQueryRaw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                libraryFilterQuery = ""
+            }
+        }
+        .onDisappear {
+            librarySearchDebounceTask?.cancel()
+        }
         .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     // Sheet avoids NavigationLink + `.searchable` (UISearchController) fighting for bar taps on some iOS versions.
