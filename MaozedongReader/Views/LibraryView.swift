@@ -474,7 +474,7 @@ struct LibraryFullSearchView: View {
                         .autocorrectionDisabled(true)
                 }
                 if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("输入关键词；匹配标题与正文前段。大库会分片搜索，避免长时间卡住界面。")
+                    Text("输入关键词；匹配标题与正文前段。索引就绪后会自动缩小检索范围，长文阅读可在设置里调版式。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if isSearching {
@@ -527,6 +527,11 @@ struct LibraryFullSearchView: View {
             .onChange(of: query) { _, newValue in
                 scheduleSearch(for: newValue)
             }
+            .onChange(of: store.librarySearchIndexReady) { _, ready in
+                if ready, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    scheduleSearch(for: query)
+                }
+            }
             .onDisappear {
                 debounceTask?.cancel()
             }
@@ -549,9 +554,10 @@ struct LibraryFullSearchView: View {
             try? await Task.sleep(nanoseconds: 280_000_000)
             guard !Task.isCancelled else { return }
             let opts: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+            let toScan = store.librarySearchDocumentsToScan(for: needle)
             var found: [UUID] = []
-            for (idx, doc) in store.documents.enumerated() {
-                if idx % 6 == 0 {
+            for (idx, doc) in toScan.enumerated() {
+                if idx % 8 == 0 {
                     await Task.yield()
                     if Task.isCancelled || generation != searchGeneration { return }
                 }

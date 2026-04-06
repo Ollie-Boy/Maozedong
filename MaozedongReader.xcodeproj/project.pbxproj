@@ -54,6 +54,7 @@
 		BF0000000000000000000038 /* AppTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000038 /* AppTypography.swift */; };
 		BF0000000000000000000039 /* NotoSerifCJKsc-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = FR00000000000000000000039 /* NotoSerifCJKsc-Regular.otf */; };
 		BF000000000000000000003A /* NotoSerif-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000003A /* NotoSerif-LICENSE.txt */; };
+		BF000000000000000000003B /* LibrarySearchIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = FR0000000000000000000003B /* LibrarySearchIndex.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -104,6 +105,7 @@
 		FR00000000000000000000038 /* AppTypography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTypography.swift; sourceTree = "<group>"; };
 		FR00000000000000000000039 /* NotoSerifCJKsc-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "NotoSerifCJKsc-Regular.otf"; sourceTree = "<group>"; };
 		FR0000000000000000000003A /* NotoSerif-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NotoSerif-LICENSE.txt"; sourceTree = "<group>"; };
+		FR0000000000000000000003B /* LibrarySearchIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibrarySearchIndex.swift; sourceTree = "<group>"; };
 		FR00000000000000000000PLIST /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FR00000000000000000000APP /* MaozedongReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MaozedongReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -205,6 +207,7 @@
 				FR00000000000000000000027 /* BundledAnthologyImporter.swift */,
 				FR00000000000000000000029 /* AnthologyTocParser.swift */,
 				FR0000000000000000000002D /* LeadLayoutNormalizer.swift */,
+				FR0000000000000000000003B /* LibrarySearchIndex.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -332,6 +335,7 @@
 				BF0000000000000000000027 /* BundledAnthologyImporter.swift in Sources */,
 				BF0000000000000000000029 /* AnthologyTocParser.swift in Sources */,
 				BF000000000000000000002D /* LeadLayoutNormalizer.swift in Sources */,
+				BF000000000000000000003B /* LibrarySearchIndex.swift in Sources */,
 				BF0000000000000000000022 /* PoemDateExtractor.swift in Sources */,
 				BF0000000000000000000023 /* DocumentItem+Sort.swift in Sources */,
 				BF000000000000000000000F /* ReaderView.swift in Sources */,

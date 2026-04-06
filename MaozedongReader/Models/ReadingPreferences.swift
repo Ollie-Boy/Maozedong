@@ -3,6 +3,12 @@ import SwiftUI
 struct ReadingPreferences: Codable, Equatable {
     var fontSize: Double
     var lineSpacing: Double
+    /// Extra vertical gap between Markdown blocks (headings, paragraphs, lists).
+    var readerBlockSpacing: Double
+    /// Horizontal inset for reading column (pt).
+    var readerHorizontalPadding: Double
+    /// 0 = full width; otherwise max content width for long lines (pt), centered on iPad/wide phones.
+    var readerMaxColumnWidth: Double
     var theme: Theme
     /// 护眼偏暖（略深、略黄），仅在选择「护眼」时生效。
     var sepiaWarmTint: Bool
@@ -14,6 +20,9 @@ struct ReadingPreferences: Codable, Equatable {
     init(
         fontSize: Double = 18,
         lineSpacing: Double = 7,
+        readerBlockSpacing: Double = 14,
+        readerHorizontalPadding: Double = 20,
+        readerMaxColumnWidth: Double = 0,
         theme: Theme = .sepia,
         sepiaWarmTint: Bool = false,
         autoDarkAtNight: Bool = false,
@@ -21,6 +30,9 @@ struct ReadingPreferences: Codable, Equatable {
     ) {
         self.fontSize = fontSize
         self.lineSpacing = lineSpacing
+        self.readerBlockSpacing = readerBlockSpacing
+        self.readerHorizontalPadding = readerHorizontalPadding
+        self.readerMaxColumnWidth = readerMaxColumnWidth
         self.theme = theme
         self.sepiaWarmTint = sepiaWarmTint
         self.autoDarkAtNight = autoDarkAtNight
@@ -107,6 +119,9 @@ extension ReadingPreferences {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         fontSize = try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? 18
         lineSpacing = try c.decodeIfPresent(Double.self, forKey: .lineSpacing) ?? 7
+        readerBlockSpacing = try c.decodeIfPresent(Double.self, forKey: .readerBlockSpacing) ?? 14
+        readerHorizontalPadding = try c.decodeIfPresent(Double.self, forKey: .readerHorizontalPadding) ?? 20
+        readerMaxColumnWidth = try c.decodeIfPresent(Double.self, forKey: .readerMaxColumnWidth) ?? 0
         theme = try c.decodeIfPresent(Theme.self, forKey: .theme) ?? .sepia
         sepiaWarmTint = try c.decodeIfPresent(Bool.self, forKey: .sepiaWarmTint) ?? false
         autoDarkAtNight = try c.decodeIfPresent(Bool.self, forKey: .autoDarkAtNight) ?? false
@@ -117,6 +132,9 @@ extension ReadingPreferences {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(fontSize, forKey: .fontSize)
         try c.encode(lineSpacing, forKey: .lineSpacing)
+        try c.encode(readerBlockSpacing, forKey: .readerBlockSpacing)
+        try c.encode(readerHorizontalPadding, forKey: .readerHorizontalPadding)
+        try c.encode(readerMaxColumnWidth, forKey: .readerMaxColumnWidth)
         try c.encode(theme, forKey: .theme)
         try c.encode(sepiaWarmTint, forKey: .sepiaWarmTint)
         try c.encode(autoDarkAtNight, forKey: .autoDarkAtNight)
@@ -124,6 +142,7 @@ extension ReadingPreferences {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case fontSize, lineSpacing, theme, sepiaWarmTint, autoDarkAtNight, followSystemAppearance
+        case fontSize, lineSpacing, readerBlockSpacing, readerHorizontalPadding, readerMaxColumnWidth
+        case theme, sepiaWarmTint, autoDarkAtNight, followSystemAppearance
     }
 }

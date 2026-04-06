@@ -265,7 +265,7 @@ struct ReaderView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 14) {
+                    LazyVStack(alignment: .leading, spacing: CGFloat(store.readingPreferences.readerBlockSpacing)) {
                         Color.clear
                             .frame(height: 0)
                             .background(
@@ -299,7 +299,11 @@ struct ReaderView: View {
                                 }
                         }
                     }
-                    .padding(.horizontal)
+                    .frame(maxWidth: store.readingPreferences.readerMaxColumnWidth > 0
+                        ? CGFloat(store.readingPreferences.readerMaxColumnWidth)
+                        : .infinity)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, CGFloat(store.readingPreferences.readerHorizontalPadding))
                     .padding(.vertical, 12)
                 }
                 .background(

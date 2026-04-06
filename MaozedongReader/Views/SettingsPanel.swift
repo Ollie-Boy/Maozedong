@@ -28,6 +28,27 @@ struct SettingsPanel: View {
                     Text("\(Int(preferences.lineSpacing))")
                         .foregroundStyle(.secondary)
                 }
+
+                HStack {
+                    Text("段间距")
+                    Slider(value: $preferences.readerBlockSpacing, in: 4...28, step: 1)
+                    Text("\(Int(preferences.readerBlockSpacing))")
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("左右边距")
+                    Slider(value: $preferences.readerHorizontalPadding, in: 8...40, step: 1)
+                    Text("\(Int(preferences.readerHorizontalPadding))")
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("栏宽上限")
+                    Slider(value: $preferences.readerMaxColumnWidth, in: 0...720, step: 20)
+                    Text(preferences.readerMaxColumnWidth < 10 ? "铺满" : "\(Int(preferences.readerMaxColumnWidth))")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("背景与文字") {

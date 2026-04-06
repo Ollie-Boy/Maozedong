@@ -12,6 +12,11 @@ final class DocumentStore: ObservableObject {
     }
     @Published private(set) var readerState: ReaderStateSnapshot = .empty
     @Published var errorMessage: String?
+    /// Set when `librarySearchIndex` has finished building for current `documents` (UI may show faster path).
+    @Published private(set) var librarySearchIndexReady = false
+
+    private var librarySearchIndex: LibrarySearchIndex?
+    private var librarySearchIndexTask: Task<Void, Never>?
 
     private var readerStateDiskTask: Task<Void, Never>?
     private var lastOpenedDocumentTask: Task<Void, Never>?
@@ -67,6 +72,34 @@ final class DocumentStore: ObservableObject {
         normalizeDocumentsAfterLoad()
         mergeBundledPoetryIfNeeded()
         mergeBundledAnthologyIfNeeded()
+        scheduleRebuildLibrarySearchIndex()
+    }
+
+    /// Documents to scan for `query`: full list when index is building or query is one character; narrowed set when index can prune.
+    func librarySearchDocumentsToScan(for query: String) -> [DocumentItem] {
+        guard let index = librarySearchIndex else { return documents }
+        guard let idSet = index.candidateIds(for: query) else { return documents }
+        if idSet.isEmpty { return [] }
+        return documents.filter { idSet.contains($0.id) }
+    }
+
+    private func scheduleRebuildLibrarySearchIndex() {
+        librarySearchIndexTask?.cancel()
+        librarySearchIndexReady = false
+        librarySearchIndex = nil
+        let rows: [(UUID, String, String)] = documents.map { doc in
+            let prefix = String(doc.textForLibrarySearch.prefix(LibrarySearchIndex.indexPreviewCharCount))
+            return (doc.id, doc.title, prefix)
+        }
+        librarySearchIndexTask = Task { @MainActor in
+            let built = await Task.detached {
+                LibrarySearchIndex.build(rows: rows.map { (id: $0.0, title: $0.1, preview: $0.2) })
+            }.value
+            guard !Task.isCancelled else { return }
+            librarySearchIndex = built
+            librarySearchIndexReady = true
+            librarySearchIndexTask = nil
+        }
     }
 
 
@@ -598,6 +631,7 @@ final class DocumentStore: ObservableObject {
         documents = next
         let data = try JSONEncoder().encode(documents)
         try data.write(to: documentsMetadataURL, options: .atomic)
+        scheduleRebuildLibrarySearchIndex()
     }
 }
 
