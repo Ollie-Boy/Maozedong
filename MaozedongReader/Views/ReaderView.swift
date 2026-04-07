@@ -306,6 +306,8 @@ struct ReaderView: View {
                     .padding(.horizontal, CGFloat(store.readingPreferences.readerHorizontalPadding))
                     .padding(.vertical, 12)
                 }
+                .scrollIndicators(.hidden)
+                .scrollDisabled(!presentsNavigationChrome)
                 .background(
                     GeometryReader { geo in
                         Color.clear
