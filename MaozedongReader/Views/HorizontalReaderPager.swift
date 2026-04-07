@@ -55,10 +55,14 @@ struct HorizontalReaderPager: View {
     }
 
     @ViewBuilder
-    private func slotView(slot: Int, width: CGFloat) -> some View {
+    private func slotView(slot: Int, width: CGFloat, lockVerticalScrollWhilePaging: Bool) -> some View {
         Group {
             if let doc = document(for: reelSlots[slot]) {
-                ReaderView(document: doc, presentsNavigationChrome: slot == 1)
+                ReaderView(
+                    document: doc,
+                    presentsNavigationChrome: slot == 1,
+                    lockVerticalScrollWhilePaging: lockVerticalScrollWhilePaging
+                )
                     .id(doc.id)
             } else {
                 Color.clear
@@ -85,11 +89,12 @@ struct HorizontalReaderPager: View {
                     let maxOffset = hasPrev ? 0 : -W
                     let clampedOffset = min(max(rawOffset, minOffset), maxOffset)
                     let progress = (clampedOffset + W) / W
+                    let pagingLocksVerticalScroll = horizontalDragActive || abs(dragTranslation) > 0.5
 
                     HStack(spacing: 0) {
-                        slotView(slot: 0, width: W)
-                        slotView(slot: 1, width: W)
-                        slotView(slot: 2, width: W)
+                        slotView(slot: 0, width: W, lockVerticalScrollWhilePaging: pagingLocksVerticalScroll)
+                        slotView(slot: 1, width: W, lockVerticalScrollWhilePaging: pagingLocksVerticalScroll)
+                        slotView(slot: 2, width: W, lockVerticalScrollWhilePaging: pagingLocksVerticalScroll)
                     }
                     .frame(width: 3 * W, alignment: .leading)
                     .offset(x: clampedOffset)

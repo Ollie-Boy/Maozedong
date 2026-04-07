@@ -28,6 +28,8 @@ struct ReaderView: View {
     let document: DocumentItem
     /// When false (e.g. horizontal pager siblings), do not register nav items so only the active page owns the navigation bar.
     var presentsNavigationChrome: Bool = true
+    /// While the horizontal pager is dragging or finishing a page turn, lock vertical scroll on **all** slots (left/center/right).
+    var lockVerticalScrollWhilePaging: Bool = false
     @State private var showingSettings = false
     @State private var showingTOC = false
     @State private var showingSearch = false
@@ -307,7 +309,7 @@ struct ReaderView: View {
                     .padding(.vertical, 12)
                 }
                 .scrollIndicators(.hidden)
-                .scrollDisabled(!presentsNavigationChrome)
+                .scrollDisabled(!presentsNavigationChrome || lockVerticalScrollWhilePaging)
                 .background(
                     GeometryReader { geo in
                         Color.clear
