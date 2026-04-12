@@ -22,7 +22,10 @@ private struct LibrarySectionHeaderView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(.ultraThinMaterial, in: Capsule())
+                .background(
+                    store.readingPreferences.libraryAccentColor.opacity(0.14),
+                    in: Capsule()
+                )
         }
         .padding(.vertical, 4)
         .textCase(nil)

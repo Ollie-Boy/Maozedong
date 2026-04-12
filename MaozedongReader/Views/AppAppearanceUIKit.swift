@@ -42,8 +42,11 @@ enum AppAppearanceUIKit {
         cellBg.backgroundColor = rowUICol
         UITableViewCell.appearance().backgroundConfiguration = cellBg
 
-        let clearHeaderFooter = UIBackgroundConfiguration.clear()
-        UITableViewHeaderFooterView.appearance().backgroundConfiguration = clearHeaderFooter
+        // SwiftUI `List` section headers use UITableViewHeaderFooterView; `.clear()` lets the default white show
+        // through (用户看到「选标题处一块白」). Match list canvas to the same chrome color as cells.
+        var headerFooterBg = UIBackgroundConfiguration()
+        headerFooterBg.backgroundColor = rowUICol
+        UITableViewHeaderFooterView.appearance().backgroundConfiguration = headerFooterBg
 
         UICollectionView.appearance().backgroundColor = .clear
     }
