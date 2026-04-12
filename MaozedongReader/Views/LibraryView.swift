@@ -104,16 +104,10 @@ struct LibraryView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    store.readingPreferences.libraryGradientTop,
-                    store.readingPreferences.libraryGradientBottom
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .allowsHitTesting(false)
-            .ignoresSafeArea()
+            // One canvas color with nav + toolbar + list (no separate gradient “card” vs chrome).
+            store.readingPreferences.backgroundColor
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
 
             Group {
                 if store.documents.isEmpty {
@@ -159,18 +153,17 @@ struct LibraryView: View {
                                 .buttonStyle(.plain)
                                 .listRowInsets(EdgeInsets(top: 10, leading: 18, bottom: 10, trailing: 18))
                                 .listRowBackground(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .fill(store.readingPreferences.backgroundColor.opacity(0.92))
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(store.readingPreferences.backgroundColor)
                                         .overlay(
-                                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
                                                 .strokeBorder(
-                                                    store.readingPreferences.libraryAccentColor.opacity(0.25),
+                                                    store.readingPreferences.libraryAccentColor.opacity(0.2),
                                                     lineWidth: 1
                                                 )
                                         )
-                                        .shadow(color: Color.black.opacity(0.07), radius: 10, y: 4)
-                                        .padding(.vertical, 4)
-                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 2)
+                                        .padding(.horizontal, 2)
                                 )
                             }
                         }
@@ -205,10 +198,10 @@ struct LibraryView: View {
                             }
                         }
                     }
-                    .listStyle(.insetGrouped)
+                    .listStyle(.plain)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
-                    .listRowBackground(store.readingPreferences.listRowBackgroundColor)
+                    .listRowBackground(store.readingPreferences.backgroundColor)
                     .listSectionSpacing(.compact)
                 }
             }
@@ -219,6 +212,7 @@ struct LibraryView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(store.readingPreferences.theme == .dark ? .dark : .light, for: .navigationBar)
         .toolbar {
                 ToolbarItemGroup(placement: .topBarLeading) {
                     Button {
@@ -557,13 +551,15 @@ struct LibraryFullSearchView: View {
                     }
                 }
             }
+            .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(store.readingPreferences.backgroundColor)
-            .listRowBackground(store.readingPreferences.listRowBackgroundColor)
+            .listRowBackground(store.readingPreferences.backgroundColor)
             .navigationTitle("搜索")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(store.readingPreferences.theme == .dark ? .dark : .light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完成") {
