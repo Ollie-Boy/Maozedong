@@ -5,6 +5,8 @@ private struct LibrarySectionHeaderView: View {
     let title: String
     let count: Int
     let expanded: Bool
+    /// Extra leading inset (e.g. nested 选集分期 under a volume).
+    var leadingInset: CGFloat = 0
 
     var body: some View {
         HStack(spacing: 10) {
@@ -28,7 +30,8 @@ private struct LibrarySectionHeaderView: View {
                 )
         }
         .padding(.vertical, 8)
-        .padding(.horizontal, 16)
+        .padding(.leading, 16 + leadingInset)
+        .padding(.trailing, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(store.readingPreferences.backgroundColor)
         .textCase(nil)
@@ -187,12 +190,6 @@ struct LibraryView: View {
                         let anth = sortedInCategory(.anthology)
                         if !anth.isEmpty {
                             Section {
-                                if anthologySectionExpanded {
-                                    ForEach(anthologyMajorGroups(from: anth)) { major in
-                                        anthologyMajorSection(major: major)
-                                    }
-                                }
-                            } header: {
                                 Button {
                                     anthologySectionExpanded.toggle()
                                 } label: {
@@ -204,6 +201,14 @@ struct LibraryView: View {
                                     .environmentObject(store)
                                 }
                                 .buttonStyle(.plain)
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(store.readingPreferences.backgroundColor)
+
+                                if anthologySectionExpanded {
+                                    ForEach(anthologyMajorGroups(from: anth)) { major in
+                                        anthologyMajorSection(major: major)
+                                    }
+                                }
                             }
                         }
                     }
@@ -320,54 +325,8 @@ struct LibraryView: View {
     @ViewBuilder
     private func anthologyMajorSection(major: AnthologyMajorGroup) -> some View {
         let majorCollapsed = collapsedAnthologyMajors.contains(major.id)
-        Section {
-            if !majorCollapsed {
-                if major.subsections.count == 1, let only = major.subsections.first {
-                    ForEach(only.items) { doc in
-                        documentRow(doc, labelLeadingInset: 0)
-                    }
-                } else {
-                    ForEach(major.subsections) { sub in
-                        let subKey = subsectionCollapseKey(majorId: major.id, subId: sub.id)
-                        let subCollapsed = collapsedAnthologySubsections.contains(subKey)
-                        Section {
-                            if !subCollapsed {
-                                ForEach(sub.items) { doc in
-                                    documentRow(doc, labelLeadingInset: 22)
-                                }
-                            }
-                        } header: {
-                            Button {
-                                if subCollapsed {
-                                    collapsedAnthologySubsections.remove(subKey)
-                                } else {
-                                    collapsedAnthologySubsections.insert(subKey)
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: subCollapsed ? "chevron.right" : "chevron.down")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                    Text(sub.title)
-                                        .font(.subheadline.weight(.medium))
-                                    Spacer()
-                                    Text("\(sub.items.count)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.leading, 14)
-                                .padding(.trailing, 12)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(store.readingPreferences.backgroundColor)
-                                .textCase(nil)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-        } header: {
+        // Use Group (not nested Section) so volume / subsection titles never use UITableView sticky header chrome.
+        Group {
             Button {
                 if majorCollapsed {
                     collapsedAnthologyMajors.remove(major.id)
@@ -383,6 +342,45 @@ struct LibraryView: View {
                 .environmentObject(store)
             }
             .buttonStyle(.plain)
+            .listRowSeparator(.hidden)
+            .listRowBackground(store.readingPreferences.backgroundColor)
+
+            if !majorCollapsed {
+                if major.subsections.count == 1, let only = major.subsections.first {
+                    ForEach(only.items) { doc in
+                        documentRow(doc, labelLeadingInset: 0)
+                    }
+                } else {
+                    ForEach(major.subsections) { sub in
+                        let subKey = subsectionCollapseKey(majorId: major.id, subId: sub.id)
+                        let subCollapsed = collapsedAnthologySubsections.contains(subKey)
+                        Button {
+                            if subCollapsed {
+                                collapsedAnthologySubsections.remove(subKey)
+                            } else {
+                                collapsedAnthologySubsections.insert(subKey)
+                            }
+                        } label: {
+                            LibrarySectionHeaderView(
+                                title: sub.title,
+                                count: sub.items.count,
+                                expanded: !subCollapsed,
+                                leadingInset: 6
+                            )
+                            .environmentObject(store)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(store.readingPreferences.backgroundColor)
+
+                        if !subCollapsed {
+                            ForEach(sub.items) { doc in
+                                documentRow(doc, labelLeadingInset: 22)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -483,12 +481,6 @@ private struct CollapsibleLibrarySection<Row: View>: View {
     var body: some View {
         if !items.isEmpty {
             Section {
-                if isExpanded {
-                    ForEach(items) { doc in
-                        row(doc)
-                    }
-                }
-            } header: {
                 Button {
                     isExpanded.toggle()
                 } label: {
@@ -499,6 +491,14 @@ private struct CollapsibleLibrarySection<Row: View>: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .listRowSeparator(.hidden)
+                .listRowBackground(store.readingPreferences.backgroundColor)
+
+                if isExpanded {
+                    ForEach(items) { doc in
+                        row(doc)
+                    }
+                }
             }
         }
     }
