@@ -43,8 +43,8 @@ enum AppAppearanceUIKit {
         UITableViewCell.appearance().backgroundConfiguration = cellBg
 
         // SwiftUI `List` section headers use UITableViewHeaderFooterView; `.clear()` lets the default white show
-        // through (用户看到「选标题处一块白」). Match list canvas to the same chrome color as cells.
-        var headerFooterBg = UIBackgroundConfiguration()
+        // through. UIBackgroundConfiguration() is not public — start from `.clear()` then set the fill color.
+        var headerFooterBg = UIBackgroundConfiguration.clear()
         headerFooterBg.backgroundColor = rowUICol
         UITableViewHeaderFooterView.appearance().backgroundConfiguration = headerFooterBg
 
