@@ -102,9 +102,6 @@ struct LibraryView: View {
         "\(majorId)|\(subId)"
     }
 
-    /// Nav bar compresses `NavigationLink` labels more than plain `Button`; keep both actions equally wide.
-    private var libraryToolbarActionMinWidth: CGFloat { 64 }
-
     var body: some View {
         ZStack {
             LinearGradient(
@@ -115,6 +112,7 @@ struct LibraryView: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+            .allowsHitTesting(false)
             .ignoresSafeArea()
 
             Group {
@@ -155,6 +153,8 @@ struct LibraryView: View {
                                             .foregroundStyle(.tertiary)
                                     }
                                     .padding(.vertical, 6)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                                 .listRowInsets(EdgeInsets(top: 10, leading: 18, bottom: 10, trailing: 18))
@@ -214,7 +214,9 @@ struct LibraryView: View {
             }
         }
         .navigationTitle("学习课本")
-        .navigationBarTitleDisplayMode(.large)
+        // Large title area has regressed on newer iOS as a non-interactive overlay blocking the first list rows
+        // (e.g. “继续阅读”); inline title avoids the ghost hit-stealer while keeping the same toolbar chrome.
+        .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
@@ -223,22 +225,18 @@ struct LibraryView: View {
                         showLibrarySearch = true
                     } label: {
                         Label("搜索", systemImage: "magnifyingglass")
-                            .labelStyle(.titleAndIcon)
-                            .font(.body)
-                            .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
-                            .contentShape(Rectangle())
+                            .labelStyle(.iconOnly)
                     }
+                    .accessibilityLabel("搜索")
                     .buttonStyle(.plain)
 
                     Button {
                         showLibrarySettings = true
                     } label: {
                         Label("设置", systemImage: "gearshape")
-                            .labelStyle(.titleAndIcon)
-                            .font(.body)
-                            .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
-                            .contentShape(Rectangle())
+                            .labelStyle(.iconOnly)
                     }
+                    .accessibilityLabel("设置")
                     .buttonStyle(.plain)
                 }
 
@@ -247,11 +245,9 @@ struct LibraryView: View {
                         showImporter = true
                     } label: {
                         Label("导入", systemImage: "square.and.arrow.down")
-                            .labelStyle(.titleAndIcon)
-                            .font(.body)
-                            .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
-                            .contentShape(Rectangle())
+                            .labelStyle(.iconOnly)
                     }
+                    .accessibilityLabel("导入")
                     .buttonStyle(.plain)
                 }
             }
