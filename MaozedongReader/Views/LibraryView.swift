@@ -120,11 +120,7 @@ struct LibraryView: View {
 
             Group {
                 if store.documents.isEmpty {
-                    ContentUnavailableView(
-                        "暂无内容",
-                        systemImage: "book.closed",
-                        description: Text("点击右上角“导入”来添加 txt 或 md 文件。")
-                    )
+                    ContentUnavailableView("暂无内容", systemImage: "book.closed")
                 } else {
                     List {
                         if let cont = store.continueReadingDocument {
@@ -526,40 +522,36 @@ struct LibraryFullSearchView: View {
         NavigationStack {
             List {
                 Section {
-                    TextField("搜索标题与正文摘要", text: $query)
+                    TextField("搜索", text: $query)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled(true)
                 }
-                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("输入关键词；匹配标题与正文前段。索引就绪后会自动缩小检索范围，长文阅读可在设置里调版式。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if isSearching {
-                    HStack {
-                        ProgressView()
-                        Text("搜索中…")
+                if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if isSearching {
+                        HStack {
+                            ProgressView()
+                        }
+                    } else if matchedIds.isEmpty {
+                        Text("无匹配结果")
                             .foregroundStyle(.secondary)
-                    }
-                } else if matchedIds.isEmpty {
-                    Text("无匹配结果")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(orderedMatches) { doc in
-                        Button {
-                            isPresented = false
-                            if doc.category == .poetry {
-                                path.append(LibraryRoute.poetry(doc.id))
-                            } else {
-                                path.append(LibraryRoute.anthology(doc.id))
-                            }
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(doc.title)
-                                    .font(.headline)
-                                if doc.category == .poetry, let y = doc.sortEpochYear {
-                                    Text(String(y))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(orderedMatches) { doc in
+                            Button {
+                                isPresented = false
+                                if doc.category == .poetry {
+                                    path.append(LibraryRoute.poetry(doc.id))
+                                } else {
+                                    path.append(LibraryRoute.anthology(doc.id))
+                                }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(doc.title)
+                                        .font(.headline)
+                                    if doc.category == .poetry, let y = doc.sortEpochYear {
+                                        Text(String(y))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
                         }

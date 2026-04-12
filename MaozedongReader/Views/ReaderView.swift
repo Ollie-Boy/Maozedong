@@ -712,17 +712,15 @@ private struct ReaderSearchSheet: View {
     var body: some View {
         List {
             Section {
-                TextField("输入关键词", text: $query)
+                TextField("搜索", text: $query)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled(true)
             }
-            if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("在当前文档中搜索全文。")
-                    .foregroundStyle(.secondary)
-            } else if results.isEmpty {
+            let qTrim = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !qTrim.isEmpty && results.isEmpty {
                 Text("无匹配结果")
                     .foregroundStyle(.secondary)
-            } else {
+            } else if !qTrim.isEmpty {
                 ForEach(results, id: \.block.id) { row in
                     Button {
                         onSelect(row.block.id)
