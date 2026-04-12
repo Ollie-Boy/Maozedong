@@ -521,11 +521,11 @@ struct LibraryFullSearchView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    TextField("搜索", text: $query)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled(true)
-                }
+                TextField("搜索", text: $query)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(store.readingPreferences.backgroundColor)
                 if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     if isSearching {
                         HStack {

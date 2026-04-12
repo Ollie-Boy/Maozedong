@@ -711,11 +711,11 @@ private struct ReaderSearchSheet: View {
 
     var body: some View {
         List {
-            Section {
-                TextField("搜索", text: $query)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled(true)
-            }
+            TextField("搜索", text: $query)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .listRowSeparator(.hidden)
+                .listRowBackground(store.readingPreferences.backgroundColor)
             let qTrim = query.trimmingCharacters(in: .whitespacesAndNewlines)
             if !qTrim.isEmpty && results.isEmpty {
                 Text("无匹配结果")
