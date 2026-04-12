@@ -50,7 +50,8 @@ extension ReadingPreferences {
     var libraryAccentColor: Color {
         switch theme {
         case .light:
-            return Color(red: 0.52, green: 0.72, blue: 0.90)
+            /// Clear sky blue on the cool canvas (not desaturated / gray).
+            return Color(red: 0.28, green: 0.58, blue: 0.96)
         case .dark:
             return Color(red: 0.95, green: 0.72, blue: 0.45)
         case .sepia:

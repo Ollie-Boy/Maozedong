@@ -60,8 +60,8 @@ struct ReadingPreferences: Codable, Equatable {
         var backgroundColor: Color {
             switch self {
             case .light:
-                /// Softer near-white; blue tint lighter than before for a calmer canvas.
-                return Color(red: 0.985, green: 0.993, blue: 1.0)
+                /// App Store–like very light cool blue (slightly more blue than red/green so it reads fresh, not gray).
+                return Color(red: 0.945, green: 0.968, blue: 0.995)
             case .dark:
                 return Color.black
             case .sepia:

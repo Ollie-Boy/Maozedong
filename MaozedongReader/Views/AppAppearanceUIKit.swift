@@ -65,7 +65,7 @@ enum AppAppearanceUIKit {
     private static func uiBackground(for theme: ReadingPreferences.Theme, sepiaWarm: Bool) -> UIColor {
         switch theme {
         case .light:
-            return UIColor(red: 0.985, green: 0.993, blue: 1.0, alpha: 1)
+            return UIColor(red: 0.945, green: 0.968, blue: 0.995, alpha: 1)
         case .dark:
             return .black
         case .sepia:
