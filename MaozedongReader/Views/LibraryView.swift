@@ -522,8 +522,10 @@ struct LibraryFullSearchView: View {
         NavigationStack {
             List {
                 TextField("搜索", text: $query)
+                    .textFieldStyle(.plain)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled(true)
+                    .searchQueryFieldChrome(store.readingPreferences)
                     .listRowSeparator(.hidden)
                     .listRowBackground(store.readingPreferences.backgroundColor)
                 if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

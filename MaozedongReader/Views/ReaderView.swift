@@ -712,8 +712,10 @@ private struct ReaderSearchSheet: View {
     var body: some View {
         List {
             TextField("搜索", text: $query)
+                .textFieldStyle(.plain)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
+                .searchQueryFieldChrome(store.readingPreferences)
                 .listRowSeparator(.hidden)
                 .listRowBackground(store.readingPreferences.backgroundColor)
             let qTrim = query.trimmingCharacters(in: .whitespacesAndNewlines)

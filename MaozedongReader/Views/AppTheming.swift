@@ -58,4 +58,43 @@ extension ReadingPreferences {
             return Color(red: 0.58, green: 0.26, blue: 0.16)
         }
     }
+
+    /// Slightly lifted fill so bordered search fields stay readable on the list canvas.
+    var searchFieldFill: Color {
+        switch theme {
+        case .light:
+            return Color.white.opacity(0.88)
+        case .dark:
+            return Color(white: 0.16)
+        case .sepia:
+            return Color.white.opacity(0.55)
+        }
+    }
+
+    var searchFieldStroke: Color {
+        switch theme {
+        case .light:
+            return Color.black.opacity(0.18)
+        case .dark:
+            return Color.white.opacity(0.28)
+        case .sepia:
+            return Color.black.opacity(0.22)
+        }
+    }
+}
+
+extension View {
+    /// Full rounded-rect border around inline search `TextField` rows (library + reader sheets).
+    func searchQueryFieldChrome(_ preferences: ReadingPreferences) -> some View {
+        padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(preferences.searchFieldFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(preferences.searchFieldStroke, lineWidth: 1.25)
+            )
+    }
 }
