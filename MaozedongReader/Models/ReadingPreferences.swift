@@ -60,8 +60,8 @@ struct ReadingPreferences: Codable, Equatable {
         var backgroundColor: Color {
             switch self {
             case .light:
-                /// Near-white with a whisper of sky blue (matches library / reader canvas).
-                return Color(red: 0.97, green: 0.985, blue: 1.0)
+                /// Softer near-white; blue tint lighter than before for a calmer canvas.
+                return Color(red: 0.985, green: 0.993, blue: 1.0)
             case .dark:
                 return Color.black
             case .sepia:

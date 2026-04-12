@@ -50,7 +50,7 @@ extension ReadingPreferences {
     var libraryAccentColor: Color {
         switch theme {
         case .light:
-            return Color(red: 0.22, green: 0.52, blue: 0.82)
+            return Color(red: 0.52, green: 0.72, blue: 0.90)
         case .dark:
             return Color(red: 0.95, green: 0.72, blue: 0.45)
         case .sepia:

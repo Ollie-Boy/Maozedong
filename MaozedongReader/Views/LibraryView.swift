@@ -130,7 +130,7 @@ struct LibraryView: View {
                                     HStack(alignment: .top, spacing: 14) {
                                         Image(systemName: "book.pages.fill")
                                             .font(.title2)
-                                            .foregroundStyle(store.readingPreferences.libraryAccentColor)
+                                            .foregroundStyle(store.readingPreferences.libraryAccentColor.opacity(0.85))
                                             .symbolRenderingMode(.hierarchical)
                                         VStack(alignment: .leading, spacing: 6) {
                                             Text("继续阅读")
@@ -146,26 +146,29 @@ struct LibraryView: View {
                                             .font(.body.weight(.semibold))
                                             .foregroundStyle(.tertiary)
                                     }
-                                    .padding(.vertical, 6)
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 4)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .listRowInsets(EdgeInsets(top: 10, leading: 18, bottom: 10, trailing: 18))
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 12, leading: 22, bottom: 12, trailing: 22))
                                 .listRowBackground(
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                                         .fill(store.readingPreferences.backgroundColor)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                                 .strokeBorder(
-                                                    store.readingPreferences.libraryAccentColor.opacity(0.2),
+                                                    store.readingPreferences.libraryAccentColor.opacity(0.14),
                                                     lineWidth: 1
                                                 )
                                         )
-                                        .padding(.vertical, 2)
-                                        .padding(.horizontal, 2)
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 14)
                                 )
                             }
+                            .listSectionSeparator(.hidden)
                         }
                         CollapsibleLibrarySection(
                             category: .poetry,
