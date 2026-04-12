@@ -209,7 +209,7 @@ struct LibraryView: View {
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
-                    .background(Color.clear)
+                    .background(store.readingPreferences.backgroundColor)
                     .listRowBackground(store.readingPreferences.backgroundColor)
                     .listSectionSpacing(.compact)
                 }
@@ -427,6 +427,7 @@ struct LibraryView: View {
                 }
             }
         }
+        .listRowBackground(store.readingPreferences.backgroundColor)
     }
 
     @ViewBuilder

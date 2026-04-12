@@ -39,8 +39,8 @@ enum AppAppearanceUIKit {
         UITableView.appearance().backgroundColor = rowUICol
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
 
-        // Grouped list cells: tint to match reading theme.
-        var cellBg = UIBackgroundConfiguration.listGroupedCell()
+        // SwiftUI `.listStyle(.plain)` uses plain table cells; `listGroupedCell()` forces grouped chrome → white rows.
+        var cellBg = UIBackgroundConfiguration.listPlainCell()
         cellBg.backgroundColor = rowUICol
         UITableViewCell.appearance().backgroundConfiguration = cellBg
 
