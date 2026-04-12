@@ -23,7 +23,7 @@ struct ReadingPreferences: Codable, Equatable {
         readerBlockSpacing: Double = 14,
         readerHorizontalPadding: Double = 20,
         readerMaxColumnWidth: Double = 0,
-        theme: Theme = .sepia,
+        theme: Theme = .light,
         sepiaWarmTint: Bool = false,
         autoDarkAtNight: Bool = false,
         followSystemAppearance: Bool = false
@@ -60,7 +60,8 @@ struct ReadingPreferences: Codable, Equatable {
         var backgroundColor: Color {
             switch self {
             case .light:
-                return Color.white
+                /// Near-white with a whisper of sky blue (matches library / reader canvas).
+                return Color(red: 0.97, green: 0.985, blue: 1.0)
             case .dark:
                 return Color.black
             case .sepia:
@@ -122,7 +123,7 @@ extension ReadingPreferences {
         readerBlockSpacing = try c.decodeIfPresent(Double.self, forKey: .readerBlockSpacing) ?? 14
         readerHorizontalPadding = try c.decodeIfPresent(Double.self, forKey: .readerHorizontalPadding) ?? 20
         readerMaxColumnWidth = try c.decodeIfPresent(Double.self, forKey: .readerMaxColumnWidth) ?? 0
-        theme = try c.decodeIfPresent(Theme.self, forKey: .theme) ?? .sepia
+        theme = try c.decodeIfPresent(Theme.self, forKey: .theme) ?? .light
         sepiaWarmTint = try c.decodeIfPresent(Bool.self, forKey: .sepiaWarmTint) ?? false
         autoDarkAtNight = try c.decodeIfPresent(Bool.self, forKey: .autoDarkAtNight) ?? false
         followSystemAppearance = try c.decodeIfPresent(Bool.self, forKey: .followSystemAppearance) ?? false

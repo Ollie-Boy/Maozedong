@@ -20,7 +20,8 @@ extension ReadingPreferences {
     var libraryGradientTop: Color {
         switch theme {
         case .light:
-            return Color(red: 0.99, green: 0.98, blue: 0.97)
+            /// Barely-there sky blue → white (top is slightly more blue).
+            return Color(red: 0.93, green: 0.965, blue: 0.995)
         case .dark:
             return Color(red: 0.12, green: 0.11, blue: 0.14)
         case .sepia:
@@ -34,7 +35,7 @@ extension ReadingPreferences {
     var libraryGradientBottom: Color {
         switch theme {
         case .light:
-            return Color(red: 0.94, green: 0.95, blue: 0.98)
+            return Color(red: 0.99, green: 0.995, blue: 1.0)
         case .dark:
             return Color(red: 0.06, green: 0.06, blue: 0.08)
         case .sepia:
@@ -49,7 +50,7 @@ extension ReadingPreferences {
     var libraryAccentColor: Color {
         switch theme {
         case .light:
-            return Color(red: 0.75, green: 0.22, blue: 0.18)
+            return Color(red: 0.22, green: 0.52, blue: 0.82)
         case .dark:
             return Color(red: 0.95, green: 0.72, blue: 0.45)
         case .sepia:
