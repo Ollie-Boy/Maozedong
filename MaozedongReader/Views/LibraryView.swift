@@ -1,5 +1,34 @@
 import SwiftUI
 
+private struct LibrarySectionHeaderView: View {
+    @EnvironmentObject private var store: DocumentStore
+    let title: String
+    let count: Int
+    let expanded: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Capsule()
+                .fill(store.readingPreferences.libraryAccentColor.opacity(0.85))
+                .frame(width: 4, height: 18)
+            Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            Text("\(count)")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(.ultraThinMaterial, in: Capsule())
+        }
+        .padding(.vertical, 4)
+        .textCase(nil)
+    }
+}
+
 private struct AnthologyMinorBucket: Identifiable {
     let id: String
     let title: String
@@ -78,8 +107,17 @@ struct LibraryView: View {
 
     var body: some View {
         ZStack {
-                store.readingPreferences.backgroundColor.ignoresSafeArea()
-                Group {
+            LinearGradient(
+                colors: [
+                    store.readingPreferences.libraryGradientTop,
+                    store.readingPreferences.libraryGradientBottom
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            Group {
                 if store.documents.isEmpty {
                     ContentUnavailableView(
                         "暂无内容",
@@ -88,61 +126,84 @@ struct LibraryView: View {
                     )
                 } else {
                     List {
-                                if let cont = store.continueReadingDocument {
-                                    Section {
-                                        Button {
-                                            if cont.category == .poetry {
-                                                path.append(LibraryRoute.poetry(cont.id))
-                                            } else {
-                                                path.append(LibraryRoute.anthology(cont.id))
-                                            }
-                                        } label: {
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                Text("继续阅读")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                                Text(cont.title)
-                                                    .font(.headline)
-                                                    .foregroundStyle(.primary)
-                                            }
-                                        }
+                        if let cont = store.continueReadingDocument {
+                            Section {
+                                Button {
+                                    if cont.category == .poetry {
+                                        path.append(LibraryRoute.poetry(cont.id))
+                                    } else {
+                                        path.append(LibraryRoute.anthology(cont.id))
                                     }
+                                } label: {
+                                    HStack(alignment: .top, spacing: 14) {
+                                        Image(systemName: "book.pages.fill")
+                                            .font(.title2)
+                                            .foregroundStyle(store.readingPreferences.libraryAccentColor)
+                                            .symbolRenderingMode(.hierarchical)
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            Text("继续阅读")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(.secondary)
+                                            Text(cont.title)
+                                                .font(.title3.weight(.semibold))
+                                                .foregroundStyle(.primary)
+                                                .multilineTextAlignment(.leading)
+                                        }
+                                        Spacer(minLength: 0)
+                                        Image(systemName: "chevron.right")
+                                            .font(.body.weight(.semibold))
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    .padding(.vertical, 6)
                                 }
-                                CollapsibleLibrarySection(
-                                    category: .poetry,
-                                    isExpanded: $poetrySectionExpanded,
-                                    items: sortedInCategory(.poetry)
-                                ) { doc in
-                                    documentRow(doc, labelLeadingInset: 0)
-                                }
+                                .buttonStyle(.plain)
+                                .listRowInsets(EdgeInsets(top: 10, leading: 18, bottom: 10, trailing: 18))
+                                .listRowBackground(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(store.readingPreferences.backgroundColor.opacity(0.92))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                .strokeBorder(
+                                                    store.readingPreferences.libraryAccentColor.opacity(0.25),
+                                                    lineWidth: 1
+                                                )
+                                        )
+                                        .shadow(color: Color.black.opacity(0.07), radius: 10, y: 4)
+                                        .padding(.vertical, 4)
+                                        .padding(.horizontal, 4)
+                                )
+                            }
+                        }
+                        CollapsibleLibrarySection(
+                            category: .poetry,
+                            isExpanded: $poetrySectionExpanded,
+                            items: sortedInCategory(.poetry)
+                        ) { doc in
+                            documentRow(doc, labelLeadingInset: 0)
+                        }
 
-                                let anth = sortedInCategory(.anthology)
-                                if !anth.isEmpty {
-                                    Section {
-                                        if anthologySectionExpanded {
-                                            ForEach(anthologyMajorGroups(from: anth)) { major in
-                                                anthologyMajorSection(major: major)
-                                            }
-                                        }
-                                    } header: {
-                                        Button {
-                                            anthologySectionExpanded.toggle()
-                                        } label: {
-                                            HStack {
-                                                Image(systemName: anthologySectionExpanded ? "chevron.down" : "chevron.right")
-                                                    .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(.secondary)
-                                                Text(DocumentCategory.anthology.displayName)
-                                                Spacer()
-                                                Text("\(anth.count)")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                            .textCase(nil)
-                                        }
-                                        .buttonStyle(.plain)
+                        let anth = sortedInCategory(.anthology)
+                        if !anth.isEmpty {
+                            Section {
+                                if anthologySectionExpanded {
+                                    ForEach(anthologyMajorGroups(from: anth)) { major in
+                                        anthologyMajorSection(major: major)
                                     }
                                 }
+                            } header: {
+                                Button {
+                                    anthologySectionExpanded.toggle()
+                                } label: {
+                                    LibrarySectionHeaderView(
+                                        title: DocumentCategory.anthology.displayName,
+                                        count: anth.count,
+                                        expanded: anthologySectionExpanded
+                                    )
+                                    .environmentObject(store)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                     .listStyle(.insetGrouped)
                     .scrollContentBackground(.hidden)
@@ -150,10 +211,10 @@ struct LibraryView: View {
                     .listRowBackground(store.readingPreferences.listRowBackgroundColor)
                     .listSectionSpacing(.compact)
                 }
-                }
+            }
         }
         .navigationTitle("学习课本")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
@@ -161,7 +222,8 @@ struct LibraryView: View {
                     Button {
                         showLibrarySearch = true
                     } label: {
-                        Text("搜索")
+                        Label("搜索", systemImage: "magnifyingglass")
+                            .labelStyle(.titleAndIcon)
                             .font(.body)
                             .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
                             .contentShape(Rectangle())
@@ -171,7 +233,8 @@ struct LibraryView: View {
                     Button {
                         showLibrarySettings = true
                     } label: {
-                        Text("设置")
+                        Label("设置", systemImage: "gearshape")
+                            .labelStyle(.titleAndIcon)
                             .font(.body)
                             .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
                             .contentShape(Rectangle())
@@ -183,7 +246,8 @@ struct LibraryView: View {
                     Button {
                         showImporter = true
                     } label: {
-                        Text("导入")
+                        Label("导入", systemImage: "square.and.arrow.down")
+                            .labelStyle(.titleAndIcon)
                             .font(.body)
                             .frame(minWidth: libraryToolbarActionMinWidth, alignment: .center)
                             .contentShape(Rectangle())
@@ -308,18 +372,12 @@ struct LibraryView: View {
                     collapsedAnthologyMajors.insert(major.id)
                 }
             } label: {
-                HStack {
-                    Image(systemName: majorCollapsed ? "chevron.right" : "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(major.title)
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text("\(major.subsections.reduce(0) { $0 + $1.items.count })")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .textCase(nil)
+                LibrarySectionHeaderView(
+                    title: major.title,
+                    count: major.subsections.reduce(0) { $0 + $1.items.count },
+                    expanded: !majorCollapsed
+                )
+                .environmentObject(store)
             }
             .buttonStyle(.plain)
         }
@@ -429,17 +487,11 @@ private struct CollapsibleLibrarySection<Row: View>: View {
                 Button {
                     isExpanded.toggle()
                 } label: {
-                    HStack {
-                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text(category.displayName)
-                        Spacer()
-                        Text("\(items.count)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .textCase(nil)
+                    LibrarySectionHeaderView(
+                        title: category.displayName,
+                        count: items.count,
+                        expanded: isExpanded
+                    )
                 }
                 .buttonStyle(.plain)
             }
