@@ -27,7 +27,10 @@ private struct LibrarySectionHeaderView: View {
                     in: Capsule()
                 )
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(store.readingPreferences.backgroundColor)
         .textCase(nil)
     }
 }
@@ -352,7 +355,11 @@ struct LibraryView: View {
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
+                                .padding(.vertical, 8)
                                 .padding(.leading, 14)
+                                .padding(.trailing, 12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(store.readingPreferences.backgroundColor)
                                 .textCase(nil)
                             }
                             .buttonStyle(.plain)
@@ -466,6 +473,7 @@ struct LibraryView: View {
 }
 
 private struct CollapsibleLibrarySection<Row: View>: View {
+    @EnvironmentObject private var store: DocumentStore
     let category: DocumentCategory
     @Binding var isExpanded: Bool
     let items: [DocumentItem]

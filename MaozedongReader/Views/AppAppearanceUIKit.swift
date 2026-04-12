@@ -33,7 +33,8 @@ enum AppAppearanceUIKit {
         // Do not use UISearchTextField.appearance(...): setSpellCheckingType / backgroundColor etc.
         // crash on newer iOS when applied via UIAppearance (SwiftUI .searchable).
 
-        UITableView.appearance().backgroundColor = .clear
+        // Plain SwiftUI `List` still shows default white behind section chrome unless the table view is tinted.
+        UITableView.appearance().backgroundColor = rowUICol
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
 
         // Grouped list cells: tint to match reading theme.
