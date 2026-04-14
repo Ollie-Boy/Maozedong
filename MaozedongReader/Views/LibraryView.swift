@@ -57,8 +57,7 @@ struct LibraryView: View {
     @State private var showFileImporter = false
     @State private var importFolderCategory: DocumentCategory = .poetry
     @State private var importTargetFolderIdString = ""
-    @State private var newPoetryFolderTitle = ""
-    @State private var newAnthologyFolderTitle = ""
+    @State private var importNewFolderTitle = ""
     @State private var showLibrarySearch = false
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
@@ -170,19 +169,6 @@ struct LibraryView: View {
                 .listRowBackground(store.readingPreferences.backgroundColor)
 
                 if poetrySectionExpanded {
-                    HStack(spacing: 10) {
-                        TextField("新建子目录", text: $newPoetryFolderTitle)
-                            .textFieldStyle(.roundedBorder)
-                        Button("添加") {
-                            store.addLibraryFolder(category: .poetry, title: newPoetryFolderTitle)
-                            newPoetryFolderTitle = ""
-                        }
-                        .disabled(newPoetryFolderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                    .padding(.vertical, 4)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(store.readingPreferences.backgroundColor)
-
                     ForEach(folders(for: .poetry)) { folder in
                         let collapsed = collapsedPoetryFolders.contains(folder.id)
                         let folderDocs = documents(in: folder)
@@ -273,19 +259,6 @@ struct LibraryView: View {
                 .listRowBackground(store.readingPreferences.backgroundColor)
 
                 if anthologySectionExpanded {
-                    HStack(spacing: 10) {
-                        TextField("新建子目录", text: $newAnthologyFolderTitle)
-                            .textFieldStyle(.roundedBorder)
-                        Button("添加") {
-                            store.addLibraryFolder(category: .anthology, title: newAnthologyFolderTitle)
-                            newAnthologyFolderTitle = ""
-                        }
-                        .disabled(newAnthologyFolderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                    .padding(.vertical, 4)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(store.readingPreferences.backgroundColor)
-
                     ForEach(userFolders) { folder in
                         let collapsed = collapsedAnthologyUserFolders.contains(folder.id)
                         let folderDocs = documents(in: folder)
@@ -466,6 +439,7 @@ struct LibraryView: View {
                     Button {
                         importFolderCategory = .poetry
                         importTargetFolderIdString = ""
+                        importNewFolderTitle = ""
                         showImportSetup = true
                     } label: {
                         Label("导入", systemImage: "square.and.arrow.down")
@@ -484,12 +458,28 @@ struct LibraryView: View {
                         }
                         .onChange(of: importFolderCategory) { _, _ in
                             importTargetFolderIdString = ""
+                            importNewFolderTitle = ""
                         }
                         Picker("放入子目录", selection: $importTargetFolderIdString) {
                             Text("不放入子目录").tag("")
                             ForEach(folders(for: importFolderCategory)) { f in
                                 Text(f.title).tag(f.id.uuidString)
                             }
+                        }
+                        Section {
+                            TextField("新子目录名称（可选）", text: $importNewFolderTitle)
+                                .textInputAutocapitalization(.never)
+                            Button("创建子目录并用于本次导入") {
+                                let name = importNewFolderTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard !name.isEmpty else { return }
+                                if let id = store.addLibraryFolder(category: importFolderCategory, title: name) {
+                                    importTargetFolderIdString = id.uuidString
+                                    importNewFolderTitle = ""
+                                }
+                            }
+                            .disabled(importNewFolderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        } header: {
+                            Text("需要新目录时")
                         }
                     }
                     .navigationTitle("导入")
@@ -508,7 +498,7 @@ struct LibraryView: View {
                         }
                     }
                 }
-                .presentationDetents([.medium])
+                .presentationDetents([.medium, .large])
             }
             .fileImporter(
                 isPresented: $showFileImporter,

@@ -567,17 +567,21 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    func addLibraryFolder(category: DocumentCategory, title: String) {
-        guard !isPreviewMode else { return }
+    @discardableResult
+    func addLibraryFolder(category: DocumentCategory, title: String) -> UUID? {
+        guard !isPreviewMode else { return nil }
         let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else { return }
+        guard !t.isEmpty else { return nil }
         let nextOrder = (libraryFolders.filter { $0.category == category }.map(\.sortOrder).max() ?? -1) + 1
-        libraryFolders.append(LibraryFolder(category: category, title: t, sortOrder: nextOrder))
+        let folder = LibraryFolder(category: category, title: t, sortOrder: nextOrder)
+        libraryFolders.append(folder)
         do {
             try saveLibraryFolders()
         } catch {
             errorMessage = "保存书库目录失败：\(error.localizedDescription)"
+            return nil
         }
+        return folder.id
     }
 
     func renameLibraryFolder(id: UUID, newTitle: String) {
