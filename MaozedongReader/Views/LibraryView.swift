@@ -65,8 +65,6 @@ struct LibraryView: View {
     @State private var collapsedAnthologySubsections: Set<String> = []
     @State private var collapsedPoetryFolders: Set<UUID> = []
     @State private var collapsedAnthologyUserFolders: Set<UUID> = []
-    @State private var collapsedPoetryUngrouped = false
-    @State private var collapsedAnthologyUngroupedImports = false
     @State private var showLibrarySettings = false
     @State private var folderToRename: LibraryFolder?
     @State private var renameFolderDraft = ""
@@ -169,6 +167,11 @@ struct LibraryView: View {
                 .listRowBackground(store.readingPreferences.backgroundColor)
 
                 if poetrySectionExpanded {
+                    let loose = poetryUngrouped()
+                    ForEach(loose) { doc in
+                        documentRow(doc, labelLeadingInset: 0, moveCategory: .poetry)
+                    }
+
                     ForEach(folders(for: .poetry)) { folder in
                         let collapsed = collapsedPoetryFolders.contains(folder.id)
                         let folderDocs = documents(in: folder)
@@ -206,31 +209,6 @@ struct LibraryView: View {
                             }
                         }
                     }
-
-                    let loose = poetryUngrouped()
-                    if !loose.isEmpty {
-                        let ugCollapsed = collapsedPoetryUngrouped
-                        Button {
-                            collapsedPoetryUngrouped.toggle()
-                        } label: {
-                            LibrarySectionHeaderView(
-                                title: "未放入子目录",
-                                count: loose.count,
-                                expanded: !ugCollapsed,
-                                leadingInset: 6
-                            )
-                            .environmentObject(store)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(store.readingPreferences.backgroundColor)
-
-                        if !ugCollapsed {
-                            ForEach(loose) { doc in
-                                documentRow(doc, labelLeadingInset: 22, moveCategory: .poetry)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -259,6 +237,12 @@ struct LibraryView: View {
                 .listRowBackground(store.readingPreferences.backgroundColor)
 
                 if anthologySectionExpanded {
+                    if !bundled.isEmpty {
+                        ForEach(anthologyMajorGroups(from: bundled)) { major in
+                            anthologyMajorSection(major: major)
+                        }
+                    }
+
                     ForEach(userFolders) { folder in
                         let collapsed = collapsedAnthologyUserFolders.contains(folder.id)
                         let folderDocs = documents(in: folder)
@@ -297,34 +281,8 @@ struct LibraryView: View {
                         }
                     }
 
-                    if !bundled.isEmpty {
-                        ForEach(anthologyMajorGroups(from: bundled)) { major in
-                            anthologyMajorSection(major: major)
-                        }
-                    }
-
-                    if !importsLoose.isEmpty {
-                        let impCollapsed = collapsedAnthologyUngroupedImports
-                        Button {
-                            collapsedAnthologyUngroupedImports.toggle()
-                        } label: {
-                            LibrarySectionHeaderView(
-                                title: "导入的篇目（未分组）",
-                                count: importsLoose.count,
-                                expanded: !impCollapsed,
-                                leadingInset: 6
-                            )
-                            .environmentObject(store)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(store.readingPreferences.backgroundColor)
-
-                        if !impCollapsed {
-                            ForEach(importsLoose) { doc in
-                                documentRow(doc, labelLeadingInset: 22, moveCategory: .anthology)
-                            }
-                        }
+                    ForEach(importsLoose) { doc in
+                        documentRow(doc, labelLeadingInset: 0, moveCategory: .anthology)
                     }
                 }
             }

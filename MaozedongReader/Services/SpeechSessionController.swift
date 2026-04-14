@@ -7,13 +7,15 @@ final class SpeechSessionController: NSObject, ObservableObject {
     private let synthesizer = AVSpeechSynthesizer()
 
     @Published private(set) var isSpeaking = false
+    /// Document whose text is currently being read (nil after `stop()` or finish).
+    private(set) var speakingDocumentId: UUID?
 
     override init() {
         super.init()
         synthesizer.delegate = self
     }
 
-    func speak(_ text: String, language: String = "zh-CN", rate: Float = 0.5) {
+    func speak(_ text: String, sourceDocumentId: UUID?, language: String = "zh-CN", rate: Float = 0.5) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
         stop()
@@ -25,6 +27,7 @@ final class SpeechSessionController: NSObject, ObservableObject {
         utterance.postUtteranceDelay = 0.1
 
         isSpeaking = true
+        speakingDocumentId = sourceDocumentId
         IdleTimerController.setSpeechPlaybackActive(true)
         synthesizer.speak(utterance)
     }
@@ -41,11 +44,17 @@ final class SpeechSessionController: NSObject, ObservableObject {
         IdleTimerController.setSpeechPlaybackActive(true)
     }
 
+    /// True while speaking or paused mid-utterance (still tied to `speakingDocumentId`).
+    var isSpeechSessionActive: Bool {
+        synthesizer.isSpeaking || synthesizer.isPaused
+    }
+
     func stop() {
         if synthesizer.isSpeaking {
             synthesizer.stopSpeaking(at: .immediate)
         }
         isSpeaking = false
+        speakingDocumentId = nil
         IdleTimerController.setSpeechPlaybackActive(false)
     }
 }
@@ -53,11 +62,13 @@ final class SpeechSessionController: NSObject, ObservableObject {
 extension SpeechSessionController: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         isSpeaking = false
+        speakingDocumentId = nil
         IdleTimerController.setSpeechPlaybackActive(false)
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         isSpeaking = false
+        speakingDocumentId = nil
         IdleTimerController.setSpeechPlaybackActive(false)
     }
 }

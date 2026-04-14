@@ -105,7 +105,7 @@ struct ReaderView: View {
                             if speechSession.isSpeaking {
                                 speechSession.stop()
                             } else {
-                                speechSession.speak(speechPlainText)
+                                speechSession.speak(speechPlainText, sourceDocumentId: document.id)
                             }
                         } label: {
                             Label(
@@ -209,6 +209,7 @@ struct ReaderView: View {
             if chrome {
                 loadBodyIfNeeded()
                 store.recordLastOpenedDocument(documentId: document.id)
+                restartSpeechForActivePageIfNeeded()
             } else {
                 progressSaveTask?.cancel()
                 let b = displayBlocks
@@ -229,10 +230,15 @@ struct ReaderView: View {
             } else {
                 prepareContent()
             }
+            restartSpeechForActivePageIfNeeded()
+        }
+        .onChange(of: loadedBody) { _, _ in
+            restartSpeechForActivePageIfNeeded()
         }
         .onChange(of: document.content) { _, _ in
             if !document.contentExternalized {
                 prepareContent()
+                restartSpeechForActivePageIfNeeded()
             }
         }
         .onDisappear {
@@ -397,11 +403,26 @@ struct ReaderView: View {
         }
     }
 
-    private var speechPlainText: String {
+    /// When TTS is running and the user makes another article the active page, read that article instead.
+    private func restartSpeechForActivePageIfNeeded() {
+        guard presentsNavigationChrome else { return }
+        guard speechSession.isSpeechSessionActive,
+              let prior = speechSession.speakingDocumentId,
+              prior != document.id else { return }
+        let text = synthesizedSpeechPlainText()
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        speechSession.speak(text, sourceDocumentId: document.id)
+    }
+
+    private func synthesizedSpeechPlainText() -> String {
         if useMarkdown, !cachedBlocks.isEmpty {
             return MarkdownBlockParser.plainText(from: cachedBlocks)
         }
         return plainSegments.map(\.text).joined(separator: "\n")
+    }
+
+    private var speechPlainText: String {
+        synthesizedSpeechPlainText()
     }
 
     @ViewBuilder
