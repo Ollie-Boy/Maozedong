@@ -8,6 +8,9 @@ extension DocumentItem {
         }
         switch a.category {
         case .poetry:
+            if a.libraryFolderSortKey != b.libraryFolderSortKey {
+                return a.libraryFolderSortKey < b.libraryFolderSortKey
+            }
             let ay = a.sortEpochYear ?? 10_000
             let by = b.sortEpochYear ?? 10_000
             if ay != by { return ay < by }
@@ -22,6 +25,9 @@ extension DocumentItem {
             if ai != bi { return ai < bi }
             return a.title < b.title
         case .anthology:
+            if a.libraryFolderSortKey != b.libraryFolderSortKey {
+                return a.libraryFolderSortKey < b.libraryFolderSortKey
+            }
             let am = a.anthologyMajorOrder ?? 99
             let bm = b.anthologyMajorOrder ?? 99
             if am != bm { return am < bm }

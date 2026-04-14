@@ -23,7 +23,7 @@ private struct ViewportHeightKey: PreferenceKey {
 
 struct ReaderView: View {
     @EnvironmentObject private var store: DocumentStore
-    @StateObject private var speechService = SpeechService()
+    @EnvironmentObject private var speechSession: SpeechSessionController
 
     let document: DocumentItem
     /// When false (e.g. horizontal pager siblings), do not register nav items so only the active page owns the navigation bar.
@@ -102,15 +102,15 @@ struct ReaderView: View {
                         }
 
                         Button {
-                            if speechService.isSpeaking {
-                                speechService.stop()
+                            if speechSession.isSpeaking {
+                                speechSession.stop()
                             } else {
-                                speechService.speak(speechPlainText)
+                                speechSession.speak(speechPlainText)
                             }
                         } label: {
                             Label(
-                                speechService.isSpeaking ? "停止朗读" : "朗读",
-                                systemImage: speechService.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
+                                speechSession.isSpeaking ? "停止朗读" : "朗读",
+                                systemImage: speechSession.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
                             )
                         }
 

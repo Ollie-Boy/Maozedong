@@ -12,6 +12,7 @@ enum PoemDateExtractor {
         let lines = body.split(separator: "\n", omittingEmptySubsequences: false)
             .prefix(6)
             .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .map { stripMarkdownBoldEdges($0) }
             .filter { !$0.isEmpty }
 
         guard !lines.isEmpty else { return (nil, nil, nil) }
@@ -28,7 +29,23 @@ enum PoemDateExtractor {
             return (y, seasonMonth(in: head) ?? lunarMonth(in: head), explicitDay(in: head))
         }
 
+        // e.g. corpus lines `1954夏` / `1965秋` (no `年`); also bare `1954` on its own meta line.
+        if let firstLine = lines.first,
+           let y = fourDigitYearWithoutRequiredNian(in: firstLine) {
+            let m = explicitMonth(in: head) ?? seasonMonth(in: head) ?? lunarMonth(in: head)
+            let d = explicitDay(in: head)
+            return (y, m, d)
+        }
+
         return (nil, nil, nil)
+    }
+
+    private static func stripMarkdownBoldEdges(_ s: String) -> String {
+        var t = s.trimmingCharacters(in: .whitespaces)
+        while t.hasPrefix("**"), t.hasSuffix("**"), t.count >= 4 {
+            t = String(t.dropFirst(2).dropLast(2)).trimmingCharacters(in: .whitespaces)
+        }
+        return t
     }
 
     private static func yearRangeLowerBound(in s: String) -> Int? {
@@ -69,6 +86,26 @@ enum PoemDateExtractor {
               let r = Range(m.range(at: 1), in: s),
               let y = Int(s[r]), y >= 1800, y <= 2100 else { return nil }
         return y
+    }
+
+    /// `1954夏`, `1965秋`, or a lone `1954` on the first meta line (no `年` required).
+    private static func fourDigitYearWithoutRequiredNian(in line: String) -> Int? {
+        let t = line.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty else { return nil }
+        let patterns = [
+            "^(\\d{4})\\s*[春夏秋冬]$",
+            "^(\\d{4})\\s*$"
+        ]
+        for pat in patterns {
+            let p = try? NSRegularExpression(pattern: pat, options: [])
+            let ns = t as NSString
+            guard let m = p?.firstMatch(in: t, options: [], range: NSRange(location: 0, length: ns.length)),
+                  m.numberOfRanges >= 2,
+                  let r = Range(m.range(at: 1), in: t),
+                  let y = Int(t[r]), y >= 1800, y <= 2100 else { continue }
+            return y
+        }
+        return nil
     }
 
     private static func seasonMonth(in s: String) -> Int? {

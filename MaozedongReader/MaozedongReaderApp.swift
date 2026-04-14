@@ -4,6 +4,7 @@ import UIKit
 @main
 struct MaozedongReaderApp: App {
     @StateObject private var store = DocumentStore()
+    @StateObject private var speechSession = SpeechSessionController()
     @Environment(\.colorScheme) private var colorScheme
     @State private var navPath = NavigationPath()
 
@@ -22,8 +23,12 @@ struct MaozedongReaderApp: App {
         WindowGroup {
             NavigationStack(path: $navPath) {
                 LibraryView(path: $navPath)
+                    .background {
+                        ReadingIdleTimerBridge(path: $navPath)
+                    }
             }
             .environmentObject(store)
+            .environmentObject(speechSession)
             .font(AppTypography.swiftUIFont(size: 17))
             .preferredColorScheme(store.readingPreferences.preferredColorSchemeResolved(environmentScheme: colorScheme))
             .onAppear {

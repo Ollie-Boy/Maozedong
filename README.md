@@ -63,6 +63,7 @@ MaozedongReader/
   Resources/               # 内置诗词语料、AnthologyTOC.md、Fonts/*.otf
   Models/
     DocumentItem.swift
+    LibraryFolder.swift
     DocumentCategory.swift
     ReaderStateSnapshot.swift
     ReadingPreferences.swift
@@ -76,8 +77,10 @@ MaozedongReader/
     MarkdownBlockParser.swift
     InlineMarkdownFormatter.swift
     StableUUID.swift
-    SpeechService.swift
+    SpeechSessionController.swift
+    IdleTimerController.swift
   Views/
+    ReadingIdleTimerBridge.swift
     LibraryView.swift
     ReaderView.swift
     AppTypography.swift

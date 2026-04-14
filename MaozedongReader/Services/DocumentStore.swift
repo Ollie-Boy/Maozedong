@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 final class DocumentStore: ObservableObject {
     @Published var documents: [DocumentItem] = []
+    @Published var libraryFolders: [LibraryFolder] = []
     @Published var readingPreferences: ReadingPreferences = .default {
         didSet {
             if readingPreferencesPersistenceDepth == 0 {
@@ -27,6 +28,7 @@ final class DocumentStore: ObservableObject {
 
     private let fileManager = FileManager.default
     private let documentsMetadataFileName = "documents.json"
+    private let libraryFoldersFileName = "library_folders.json"
     private let readingPreferencesFileName = "reading_preferences.json"
     private let readerStateFileName = "reader_state.json"
     private let isPreviewMode: Bool
@@ -37,6 +39,10 @@ final class DocumentStore: ObservableObject {
 
     private var documentsMetadataURL: URL {
         documentsDirectory.appendingPathComponent(documentsMetadataFileName)
+    }
+
+    private var libraryFoldersURL: URL {
+        documentsDirectory.appendingPathComponent(libraryFoldersFileName)
     }
 
     private var articleBodiesDirectoryURL: URL {
@@ -60,6 +66,7 @@ final class DocumentStore: ObservableObject {
         self.isPreviewMode = previewMode
         guard !previewMode else {
             documents = DocumentItem.previewItems
+            libraryFolders = []
             withoutReadingPreferencesPersistence {
                 readingPreferences = .default
             }
@@ -69,6 +76,7 @@ final class DocumentStore: ObservableObject {
 
         loadAll()
         removeLegacySampleDocumentsIfNeeded()
+        syncDocumentLibraryFolderSortKeysFromFoldersIfNeeded()
         normalizeDocumentsAfterLoad()
         mergeBundledPoetryIfNeeded()
         mergeBundledAnthologyIfNeeded()
@@ -164,7 +172,7 @@ final class DocumentStore: ObservableObject {
     }
 
     private static let bundledPoetryVersionKey = "bundledPoetryCorpusVersion"
-    private static let bundledPoetryVersion = "v11-poetry-date-range-merge"
+    private static let bundledPoetryVersion = "v12-poetry-year-suffix-dates"
 
     private func normalizeDocumentsAfterLoad() {
         guard !isPreviewMode else { return }
@@ -228,8 +236,16 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    func importFiles(from urls: [URL]) throws {
+    func importFiles(from urls: [URL], forcedCategory: DocumentCategory? = nil, libraryFolderId: UUID? = nil) throws {
         guard !isPreviewMode else { return }
+
+        let folderSortKey: Int
+        if let libraryFolderId,
+           let folder = libraryFolders.first(where: { $0.id == libraryFolderId }) {
+            folderSortKey = folder.sortOrder
+        } else {
+            folderSortKey = 0
+        }
 
         for url in urls {
             let shouldStopAccess = url.startAccessingSecurityScopedResource()
@@ -241,7 +257,7 @@ final class DocumentStore: ObservableObject {
 
             do {
                 let imported = try PlainTextFileImporter.parse(url: url)
-                let category = PlainTextFileImporter.inferredCategory(
+                let category = forcedCategory ?? PlainTextFileImporter.inferredCategory(
                     fileName: url.lastPathComponent,
                     content: imported.content
                 )
@@ -249,7 +265,9 @@ final class DocumentStore: ObservableObject {
                     title: imported.title,
                     content: imported.content,
                     sourceFileName: url.lastPathComponent,
-                    category: category
+                    category: category,
+                    libraryFolderId: libraryFolderId,
+                    libraryFolderSortKey: folderSortKey
                 )
                 item.backfillPoetrySortMetadataFromContentIfNeeded()
                 documents.append(item)
@@ -311,6 +329,10 @@ final class DocumentStore: ObservableObject {
 
     func updateCategory(documentId: UUID, category: DocumentCategory) {
         guard let idx = documents.firstIndex(where: { $0.id == documentId }) else { return }
+        if documents[idx].category != category {
+            documents[idx].libraryFolderId = nil
+            documents[idx].libraryFolderSortKey = 0
+        }
         documents[idx].category = category
         documents[idx].updatedAt = Date()
         let resolved = (documents[idx].category == .poetry && documents[idx].content.isEmpty && documents[idx].contentExternalized)
@@ -388,6 +410,7 @@ final class DocumentStore: ObservableObject {
     func exportBackupData() throws -> Data {
         let payload = BackupPayload(
             documents: documents.map(documentForBackup),
+            libraryFolders: libraryFolders,
             readerState: readerState,
             readingPreferences: readingPreferences,
             exportedAt: Date()
@@ -405,6 +428,9 @@ final class DocumentStore: ObservableObject {
         dec.dateDecodingStrategy = .iso8601
         let payload = try dec.decode(BackupPayload.self, from: data)
         documents = payload.documents.sorted(by: DocumentItem.displaySort)
+        libraryFolders = payload.libraryFolders
+        try? saveLibraryFolders()
+        syncDocumentLibraryFolderSortKeysFromFoldersIfNeeded()
         readerState = payload.readerState
         withoutReadingPreferencesPersistence {
             readingPreferences = payload.readingPreferences
@@ -480,8 +506,140 @@ final class DocumentStore: ObservableObject {
 
     private func loadAll() {
         loadDocuments()
+        loadLibraryFolders()
         loadReadingPreferences()
         loadReaderState()
+    }
+
+    private func loadLibraryFolders() {
+        guard fileManager.fileExists(atPath: libraryFoldersURL.path) else {
+            libraryFolders = []
+            return
+        }
+        do {
+            let data = try Data(contentsOf: libraryFoldersURL)
+            libraryFolders = try JSONDecoder().decode([LibraryFolder].self, from: data)
+        } catch {
+            libraryFolders = []
+            errorMessage = "读取书库目录失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func saveLibraryFolders() throws {
+        let data = try JSONEncoder().encode(libraryFolders)
+        try data.write(to: libraryFoldersURL, options: .atomic)
+    }
+
+    /// Keeps `libraryFolderSortKey` in sync with folder list (and drops stale folder ids).
+    private func syncDocumentLibraryFolderSortKeysFromFoldersIfNeeded() {
+        guard !isPreviewMode else { return }
+        var changed = false
+        for i in documents.indices {
+            var d = documents[i]
+            if let fid = d.libraryFolderId {
+                guard let folder = libraryFolders.first(where: { $0.id == fid }),
+                      folder.category == d.category else {
+                    d.libraryFolderId = nil
+                    d.libraryFolderSortKey = 0
+                    changed = true
+                    documents[i] = d
+                    continue
+                }
+                if d.libraryFolderSortKey != folder.sortOrder {
+                    d.libraryFolderSortKey = folder.sortOrder
+                    changed = true
+                }
+            } else if d.libraryFolderSortKey != 0 {
+                d.libraryFolderSortKey = 0
+                changed = true
+            }
+            documents[i] = d
+        }
+        guard changed else { return }
+        let sorted = documents.sorted(by: DocumentItem.displaySort)
+        if sorted.map(\.id) != documents.map(\.id) {
+            documents = sorted
+        }
+        do {
+            try saveDocuments()
+        } catch {
+            errorMessage = "同步书库目录排序失败：\(error.localizedDescription)"
+        }
+    }
+
+    func addLibraryFolder(category: DocumentCategory, title: String) {
+        guard !isPreviewMode else { return }
+        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        let nextOrder = (libraryFolders.filter { $0.category == category }.map(\.sortOrder).max() ?? -1) + 1
+        libraryFolders.append(LibraryFolder(category: category, title: t, sortOrder: nextOrder))
+        do {
+            try saveLibraryFolders()
+        } catch {
+            errorMessage = "保存书库目录失败：\(error.localizedDescription)"
+        }
+    }
+
+    func renameLibraryFolder(id: UUID, newTitle: String) {
+        guard !isPreviewMode else { return }
+        let t = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        guard let idx = libraryFolders.firstIndex(where: { $0.id == id }) else { return }
+        libraryFolders[idx].title = t
+        do {
+            try saveLibraryFolders()
+        } catch {
+            errorMessage = "重命名目录失败：\(error.localizedDescription)"
+        }
+    }
+
+    func deleteLibraryFolder(id: UUID) {
+        guard !isPreviewMode else { return }
+        libraryFolders.removeAll { $0.id == id }
+        for i in documents.indices where documents[i].libraryFolderId == id {
+            documents[i].libraryFolderId = nil
+            documents[i].libraryFolderSortKey = 0
+            documents[i].updatedAt = Date()
+        }
+        documents.sort(by: DocumentItem.displaySort)
+        do {
+            try saveLibraryFolders()
+            try saveDocuments()
+        } catch {
+            errorMessage = "删除目录失败：\(error.localizedDescription)"
+        }
+        scheduleRebuildLibrarySearchIndex()
+    }
+
+    func assignDocuments(documentIds: [UUID], toFolderId folderId: UUID?) {
+        guard !isPreviewMode else { return }
+        let sortKey: Int
+        if let folderId,
+           let folder = libraryFolders.first(where: { $0.id == folderId }) {
+            sortKey = folder.sortOrder
+        } else {
+            sortKey = 0
+        }
+        var touched = false
+        for id in documentIds {
+            guard let idx = documents.firstIndex(where: { $0.id == id }) else { continue }
+            if let folderId {
+                guard let folder = libraryFolders.first(where: { $0.id == folderId }),
+                      folder.category == documents[idx].category else { continue }
+            }
+            documents[idx].libraryFolderId = folderId
+            documents[idx].libraryFolderSortKey = folderId == nil ? 0 : sortKey
+            documents[idx].updatedAt = Date()
+            touched = true
+        }
+        guard touched else { return }
+        documents.sort(by: DocumentItem.displaySort)
+        do {
+            try saveDocuments()
+        } catch {
+            errorMessage = "移动篇目失败：\(error.localizedDescription)"
+        }
+        scheduleRebuildLibrarySearchIndex()
     }
 
     private func loadDocuments() {
@@ -637,8 +795,45 @@ final class DocumentStore: ObservableObject {
 
 private struct BackupPayload: Codable {
     var documents: [DocumentItem]
+    var libraryFolders: [LibraryFolder]
     var readerState: ReaderStateSnapshot
     var readingPreferences: ReadingPreferences
     var exportedAt: Date
+
+    init(
+        documents: [DocumentItem],
+        libraryFolders: [LibraryFolder],
+        readerState: ReaderStateSnapshot,
+        readingPreferences: ReadingPreferences,
+        exportedAt: Date
+    ) {
+        self.documents = documents
+        self.libraryFolders = libraryFolders
+        self.readerState = readerState
+        self.readingPreferences = readingPreferences
+        self.exportedAt = exportedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        documents = try c.decode([DocumentItem].self, forKey: .documents)
+        libraryFolders = try c.decodeIfPresent([LibraryFolder].self, forKey: .libraryFolders) ?? []
+        readerState = try c.decode(ReaderStateSnapshot.self, forKey: .readerState)
+        readingPreferences = try c.decode(ReadingPreferences.self, forKey: .readingPreferences)
+        exportedAt = try c.decode(Date.self, forKey: .exportedAt)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case documents, libraryFolders, readerState, readingPreferences, exportedAt
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(documents, forKey: .documents)
+        try c.encode(libraryFolders, forKey: .libraryFolders)
+        try c.encode(readerState, forKey: .readerState)
+        try c.encode(readingPreferences, forKey: .readingPreferences)
+        try c.encode(exportedAt, forKey: .exportedAt)
+    }
 }
 

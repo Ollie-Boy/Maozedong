@@ -1,7 +1,9 @@
 import AVFoundation
 import Foundation
 
-final class SpeechService: NSObject, ObservableObject {
+/// One shared speech synthesizer for the whole app so paging between articles does not cancel playback.
+@MainActor
+final class SpeechSessionController: NSObject, ObservableObject {
     private let synthesizer = AVSpeechSynthesizer()
 
     @Published private(set) var isSpeaking = false
@@ -23,17 +25,20 @@ final class SpeechService: NSObject, ObservableObject {
         utterance.postUtteranceDelay = 0.1
 
         isSpeaking = true
+        IdleTimerController.setSpeechPlaybackActive(true)
         synthesizer.speak(utterance)
     }
 
     func pause() {
         _ = synthesizer.pauseSpeaking(at: .immediate)
         isSpeaking = false
+        IdleTimerController.setSpeechPlaybackActive(false)
     }
 
     func resume() {
         _ = synthesizer.continueSpeaking()
         isSpeaking = true
+        IdleTimerController.setSpeechPlaybackActive(true)
     }
 
     func stop() {
@@ -41,15 +46,18 @@ final class SpeechService: NSObject, ObservableObject {
             synthesizer.stopSpeaking(at: .immediate)
         }
         isSpeaking = false
+        IdleTimerController.setSpeechPlaybackActive(false)
     }
 }
 
-extension SpeechService: AVSpeechSynthesizerDelegate {
+extension SpeechSessionController: AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         isSpeaking = false
+        IdleTimerController.setSpeechPlaybackActive(false)
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         isSpeaking = false
+        IdleTimerController.setSpeechPlaybackActive(false)
     }
 }

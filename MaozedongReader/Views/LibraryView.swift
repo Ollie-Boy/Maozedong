@@ -53,16 +53,55 @@ private struct AnthologyMajorGroup: Identifiable {
 struct LibraryView: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var path: NavigationPath
-    @State private var showImporter = false
+    @State private var showImportSetup = false
+    @State private var showFileImporter = false
+    @State private var importFolderCategory: DocumentCategory = .poetry
+    @State private var importTargetFolderIdString = ""
+    @State private var newPoetryFolderTitle = ""
+    @State private var newAnthologyFolderTitle = ""
     @State private var showLibrarySearch = false
     @State private var poetrySectionExpanded = true
     @State private var anthologySectionExpanded = true
     @State private var collapsedAnthologyMajors: Set<Int> = []
     @State private var collapsedAnthologySubsections: Set<String> = []
+    @State private var collapsedPoetryFolders: Set<UUID> = []
+    @State private var collapsedAnthologyUserFolders: Set<UUID> = []
+    @State private var collapsedPoetryUngrouped = false
+    @State private var collapsedAnthologyUngroupedImports = false
     @State private var showLibrarySettings = false
+    @State private var folderToRename: LibraryFolder?
+    @State private var renameFolderDraft = ""
+    @State private var folderPendingDelete: UUID?
 
     private func sortedInCategory(_ cat: DocumentCategory) -> [DocumentItem] {
         store.documents.filter { $0.category == cat }.sorted(by: DocumentItem.displaySort)
+    }
+
+    private func folders(for category: DocumentCategory) -> [LibraryFolder] {
+        store.libraryFolders.filter { $0.category == category }.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    private func documents(in folder: LibraryFolder) -> [DocumentItem] {
+        store.documents.filter { $0.libraryFolderId == folder.id }.sorted(by: DocumentItem.displaySort)
+    }
+
+    private func poetryUngrouped() -> [DocumentItem] {
+        store.documents.filter { $0.category == .poetry && $0.libraryFolderId == nil }.sorted(by: DocumentItem.displaySort)
+    }
+
+    private func anthologyBundledUngrouped() -> [DocumentItem] {
+        store.documents.filter { $0.category == .anthology && $0.isBundledAnthology && $0.libraryFolderId == nil }
+            .sorted(by: DocumentItem.displaySort)
+    }
+
+    private func anthologyImportUngrouped() -> [DocumentItem] {
+        store.documents.filter { $0.category == .anthology && !$0.isBundledAnthology && $0.libraryFolderId == nil }
+            .sorted(by: DocumentItem.displaySort)
+    }
+
+    private func importTargetFolderId() -> UUID? {
+        guard !importTargetFolderIdString.isEmpty else { return nil }
+        return UUID(uuidString: importTargetFolderIdString)
     }
 
     private func anthologyMajorGroups(from items: [DocumentItem]) -> [AnthologyMajorGroup] {
@@ -109,6 +148,214 @@ struct LibraryView: View {
 
     private func subsectionCollapseKey(majorId: Int, subId: String) -> String {
         "\(majorId)|\(subId)"
+    }
+
+    @ViewBuilder
+    private func poetryLibrarySection() -> some View {
+        let items = sortedInCategory(.poetry)
+        if !items.isEmpty {
+            Section {
+                Button {
+                    poetrySectionExpanded.toggle()
+                } label: {
+                    LibrarySectionHeaderView(
+                        title: DocumentCategory.poetry.displayName,
+                        count: items.count,
+                        expanded: poetrySectionExpanded
+                    )
+                    .environmentObject(store)
+                }
+                .buttonStyle(.plain)
+                .listRowSeparator(.hidden)
+                .listRowBackground(store.readingPreferences.backgroundColor)
+
+                if poetrySectionExpanded {
+                    HStack(spacing: 10) {
+                        TextField("新建子目录", text: $newPoetryFolderTitle)
+                            .textFieldStyle(.roundedBorder)
+                        Button("添加") {
+                            store.addLibraryFolder(category: .poetry, title: newPoetryFolderTitle)
+                            newPoetryFolderTitle = ""
+                        }
+                        .disabled(newPoetryFolderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(.vertical, 4)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(store.readingPreferences.backgroundColor)
+
+                    ForEach(folders(for: .poetry)) { folder in
+                        let collapsed = collapsedPoetryFolders.contains(folder.id)
+                        let folderDocs = documents(in: folder)
+                        Button {
+                            if collapsed {
+                                collapsedPoetryFolders.remove(folder.id)
+                            } else {
+                                collapsedPoetryFolders.insert(folder.id)
+                            }
+                        } label: {
+                            LibrarySectionHeaderView(
+                                title: folder.title,
+                                count: folderDocs.count,
+                                expanded: !collapsed,
+                                leadingInset: 6
+                            )
+                            .environmentObject(store)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("重命名") {
+                                folderToRename = folder
+                                renameFolderDraft = folder.title
+                            }
+                            Button("删除目录", role: .destructive) {
+                                folderPendingDelete = folder.id
+                            }
+                        }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(store.readingPreferences.backgroundColor)
+
+                        if !collapsed {
+                            ForEach(folderDocs) { doc in
+                                documentRow(doc, labelLeadingInset: 22, moveCategory: .poetry)
+                            }
+                        }
+                    }
+
+                    let loose = poetryUngrouped()
+                    if !loose.isEmpty {
+                        let ugCollapsed = collapsedPoetryUngrouped
+                        Button {
+                            collapsedPoetryUngrouped.toggle()
+                        } label: {
+                            LibrarySectionHeaderView(
+                                title: "未放入子目录",
+                                count: loose.count,
+                                expanded: !ugCollapsed,
+                                leadingInset: 6
+                            )
+                            .environmentObject(store)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(store.readingPreferences.backgroundColor)
+
+                        if !ugCollapsed {
+                            ForEach(loose) { doc in
+                                documentRow(doc, labelLeadingInset: 22, moveCategory: .poetry)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func anthologyLibrarySection() -> some View {
+        let bundled = anthologyBundledUngrouped()
+        let userFolders = folders(for: .anthology)
+        let importsLoose = anthologyImportUngrouped()
+        let anthCount = bundled.count + importsLoose.count + userFolders.map { documents(in: $0).count }.reduce(0, +)
+        if anthCount > 0 {
+            Section {
+                Button {
+                    anthologySectionExpanded.toggle()
+                } label: {
+                    LibrarySectionHeaderView(
+                        title: DocumentCategory.anthology.displayName,
+                        count: anthCount,
+                        expanded: anthologySectionExpanded
+                    )
+                    .environmentObject(store)
+                }
+                .buttonStyle(.plain)
+                .listRowSeparator(.hidden)
+                .listRowBackground(store.readingPreferences.backgroundColor)
+
+                if anthologySectionExpanded {
+                    HStack(spacing: 10) {
+                        TextField("新建子目录", text: $newAnthologyFolderTitle)
+                            .textFieldStyle(.roundedBorder)
+                        Button("添加") {
+                            store.addLibraryFolder(category: .anthology, title: newAnthologyFolderTitle)
+                            newAnthologyFolderTitle = ""
+                        }
+                        .disabled(newAnthologyFolderTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(.vertical, 4)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(store.readingPreferences.backgroundColor)
+
+                    ForEach(userFolders) { folder in
+                        let collapsed = collapsedAnthologyUserFolders.contains(folder.id)
+                        let folderDocs = documents(in: folder)
+                        Button {
+                            if collapsed {
+                                collapsedAnthologyUserFolders.remove(folder.id)
+                            } else {
+                                collapsedAnthologyUserFolders.insert(folder.id)
+                            }
+                        } label: {
+                            LibrarySectionHeaderView(
+                                title: folder.title,
+                                count: folderDocs.count,
+                                expanded: !collapsed,
+                                leadingInset: 6
+                            )
+                            .environmentObject(store)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("重命名") {
+                                folderToRename = folder
+                                renameFolderDraft = folder.title
+                            }
+                            Button("删除目录", role: .destructive) {
+                                folderPendingDelete = folder.id
+                            }
+                        }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(store.readingPreferences.backgroundColor)
+
+                        if !collapsed {
+                            ForEach(folderDocs) { doc in
+                                documentRow(doc, labelLeadingInset: 22, moveCategory: .anthology)
+                            }
+                        }
+                    }
+
+                    if !bundled.isEmpty {
+                        ForEach(anthologyMajorGroups(from: bundled)) { major in
+                            anthologyMajorSection(major: major)
+                        }
+                    }
+
+                    if !importsLoose.isEmpty {
+                        let impCollapsed = collapsedAnthologyUngroupedImports
+                        Button {
+                            collapsedAnthologyUngroupedImports.toggle()
+                        } label: {
+                            LibrarySectionHeaderView(
+                                title: "导入的篇目（未分组）",
+                                count: importsLoose.count,
+                                expanded: !impCollapsed,
+                                leadingInset: 6
+                            )
+                            .environmentObject(store)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(store.readingPreferences.backgroundColor)
+
+                        if !impCollapsed {
+                            ForEach(importsLoose) { doc in
+                                documentRow(doc, labelLeadingInset: 22, moveCategory: .anthology)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     var body: some View {
@@ -175,38 +422,9 @@ struct LibraryView: View {
                             }
                             .listSectionSeparator(.hidden)
                         }
-                        CollapsibleLibrarySection(
-                            category: .poetry,
-                            isExpanded: $poetrySectionExpanded,
-                            items: sortedInCategory(.poetry)
-                        ) { doc in
-                            documentRow(doc, labelLeadingInset: 0)
-                        }
+                        poetryLibrarySection()
 
-                        let anth = sortedInCategory(.anthology)
-                        if !anth.isEmpty {
-                            Section {
-                                Button {
-                                    anthologySectionExpanded.toggle()
-                                } label: {
-                                    LibrarySectionHeaderView(
-                                        title: DocumentCategory.anthology.displayName,
-                                        count: anth.count,
-                                        expanded: anthologySectionExpanded
-                                    )
-                                    .environmentObject(store)
-                                }
-                                .buttonStyle(.plain)
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(store.readingPreferences.backgroundColor)
-
-                                if anthologySectionExpanded {
-                                    ForEach(anthologyMajorGroups(from: anth)) { major in
-                                        anthologyMajorSection(major: major)
-                                    }
-                                }
-                            }
-                        }
+                        anthologyLibrarySection()
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -246,13 +464,62 @@ struct LibraryView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showImporter = true
+                        importFolderCategory = .poetry
+                        importTargetFolderIdString = ""
+                        showImportSetup = true
                     } label: {
                         Label("导入", systemImage: "square.and.arrow.down")
                             .labelStyle(.iconOnly)
                     }
                     .accessibilityLabel("导入")
                     .buttonStyle(.plain)
+                }
+            }
+            .sheet(isPresented: $showImportSetup) {
+                NavigationStack {
+                    Form {
+                        Picker("分类", selection: $importFolderCategory) {
+                            Text(DocumentCategory.poetry.displayName).tag(DocumentCategory.poetry)
+                            Text(DocumentCategory.anthology.displayName).tag(DocumentCategory.anthology)
+                        }
+                        .onChange(of: importFolderCategory) { _, _ in
+                            importTargetFolderIdString = ""
+                        }
+                        Picker("放入子目录", selection: $importTargetFolderIdString) {
+                            Text("不放入子目录").tag("")
+                            ForEach(folders(for: importFolderCategory)) { f in
+                                Text(f.title).tag(f.id.uuidString)
+                            }
+                        }
+                    }
+                    .navigationTitle("导入")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("取消") { showImportSetup = false }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("选择文件") {
+                                showImportSetup = false
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                    showFileImporter = true
+                                }
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: PlainTextFileImporter.supportedContentTypes,
+                allowsMultipleSelection: true
+            ) { result in
+                do {
+                    let urls = try result.get()
+                    try store.importFiles(from: urls, forcedCategory: importFolderCategory, libraryFolderId: importTargetFolderId())
+                } catch {
+                    store.errorMessage = error.localizedDescription
                 }
             }
             .sheet(isPresented: $showLibrarySearch) {
@@ -276,18 +543,6 @@ struct LibraryView: View {
                         }
                 }
             }
-            .fileImporter(
-                isPresented: $showImporter,
-                allowedContentTypes: PlainTextFileImporter.supportedContentTypes,
-                allowsMultipleSelection: true
-            ) { result in
-                do {
-                    let urls = try result.get()
-                    try store.importFiles(from: urls)
-                } catch {
-                    store.errorMessage = error.localizedDescription
-                }
-            }
             .alert("导入失败", isPresented: Binding(
                 get: { store.errorMessage != nil },
                 set: { if !$0 { store.clearError() } }
@@ -296,6 +551,44 @@ struct LibraryView: View {
             }, message: {
                 Text(store.errorMessage ?? "")
             })
+            .sheet(item: $folderToRename) { folder in
+                NavigationStack {
+                    Form {
+                        TextField("名称", text: $renameFolderDraft)
+                    }
+                    .navigationTitle("重命名子目录")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("取消") { folderToRename = nil }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("保存") {
+                                store.renameLibraryFolder(id: folder.id, newTitle: renameFolderDraft)
+                                folderToRename = nil
+                            }
+                            .disabled(renameFolderDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
+                    }
+                }
+                .presentationDetents([.height(160)])
+            }
+            .confirmationDialog(
+                "删除子目录？其中的篇目将移回未分组。",
+                isPresented: Binding(
+                    get: { folderPendingDelete != nil },
+                    set: { if !$0 { folderPendingDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("删除", role: .destructive) {
+                    if let id = folderPendingDelete {
+                        store.deleteLibraryFolder(id: id)
+                    }
+                    folderPendingDelete = nil
+                }
+                Button("取消", role: .cancel) { folderPendingDelete = nil }
+            }
             .navigationDestination(for: LibraryRoute.self) { route in
                 switch route {
                 case let .poetry(id):
@@ -381,7 +674,7 @@ struct LibraryView: View {
     }
 
     @ViewBuilder
-    private func documentRow(_ doc: DocumentItem, labelLeadingInset: CGFloat = 0) -> some View {
+    private func documentRow(_ doc: DocumentItem, labelLeadingInset: CGFloat = 0, moveCategory: DocumentCategory? = nil) -> some View {
         Group {
             if doc.category == .poetry {
                 Button {
@@ -416,6 +709,24 @@ struct LibraryView: View {
                             Text("✓ \(c.displayName)")
                         } else {
                             Text(c.displayName)
+                        }
+                    }
+                }
+            }
+            if let mc = moveCategory, doc.category == mc {
+                Menu("移动到子目录") {
+                    Button("不放入子目录") {
+                        store.assignDocuments(documentIds: [doc.id], toFolderId: nil)
+                    }
+                    ForEach(folders(for: mc)) { f in
+                        Button {
+                            store.assignDocuments(documentIds: [doc.id], toFolderId: f.id)
+                        } label: {
+                            if doc.libraryFolderId == f.id {
+                                Text("✓ \(f.title)")
+                            } else {
+                                Text(f.title)
+                            }
                         }
                     }
                 }
@@ -461,39 +772,6 @@ struct LibraryView: View {
                         .padding(.vertical, 2)
                         .background(Color.accentColor.opacity(0.15))
                         .clipShape(Capsule())
-                }
-            }
-        }
-    }
-}
-
-private struct CollapsibleLibrarySection<Row: View>: View {
-    @EnvironmentObject private var store: DocumentStore
-    let category: DocumentCategory
-    @Binding var isExpanded: Bool
-    let items: [DocumentItem]
-    @ViewBuilder let row: (DocumentItem) -> Row
-
-    var body: some View {
-        if !items.isEmpty {
-            Section {
-                Button {
-                    isExpanded.toggle()
-                } label: {
-                    LibrarySectionHeaderView(
-                        title: category.displayName,
-                        count: items.count,
-                        expanded: isExpanded
-                    )
-                }
-                .buttonStyle(.plain)
-                .listRowSeparator(.hidden)
-                .listRowBackground(store.readingPreferences.backgroundColor)
-
-                if isExpanded {
-                    ForEach(items) { doc in
-                        row(doc)
-                    }
                 }
             }
         }
@@ -634,4 +912,5 @@ struct LibraryFullSearchView: View {
         LibraryView(path: .constant(NavigationPath()))
     }
     .environmentObject(DocumentStore(previewMode: true))
+    .environmentObject(SpeechSessionController())
 }

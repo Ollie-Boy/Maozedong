@@ -23,6 +23,10 @@ struct DocumentItem: Identifiable, Codable, Hashable {
     var anthologyMajorTitle: String?
     var anthologyMajorOrder: Int?
     var anthologySubOrder: Int?
+    /// Optional user folder (library grouping); bundled 选集篇目通常留空。
+    var libraryFolderId: UUID?
+    /// Cached for `displaySort` so sorting stays stable without the store (0 = 未分组，靠前).
+    var libraryFolderSortKey: Int
     let createdAt: Date
     var updatedAt: Date
 
@@ -30,6 +34,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         case id, title, content, contentExternalized, contentPreview, sourceFileName, category
         case sortEpochYear, sortEpochMonth, sortEpochDay, sortCorpusIndex
         case anthologySectionTitle, anthologyMajorTitle, anthologyMajorOrder, anthologySubOrder
+        case libraryFolderId, libraryFolderSortKey
         case createdAt, updatedAt
     }
 
@@ -49,6 +54,8 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         anthologyMajorTitle: String? = nil,
         anthologyMajorOrder: Int? = nil,
         anthologySubOrder: Int? = nil,
+        libraryFolderId: UUID? = nil,
+        libraryFolderSortKey: Int = 0,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -67,6 +74,8 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         self.anthologyMajorTitle = anthologyMajorTitle
         self.anthologyMajorOrder = anthologyMajorOrder
         self.anthologySubOrder = anthologySubOrder
+        self.libraryFolderId = libraryFolderId
+        self.libraryFolderSortKey = libraryFolderSortKey
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -87,6 +96,8 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         anthologyMajorTitle = try c.decodeIfPresent(String.self, forKey: .anthologyMajorTitle)
         anthologyMajorOrder = try c.decodeIfPresent(Int.self, forKey: .anthologyMajorOrder)
         anthologySubOrder = try c.decodeIfPresent(Int.self, forKey: .anthologySubOrder)
+        libraryFolderId = try c.decodeIfPresent(UUID.self, forKey: .libraryFolderId)
+        libraryFolderSortKey = try c.decodeIfPresent(Int.self, forKey: .libraryFolderSortKey) ?? 0
 
         if let cat = try c.decodeIfPresent(DocumentCategory.self, forKey: .category) {
             category = cat
@@ -121,6 +132,8 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         try c.encodeIfPresent(anthologyMajorTitle, forKey: .anthologyMajorTitle)
         try c.encodeIfPresent(anthologyMajorOrder, forKey: .anthologyMajorOrder)
         try c.encodeIfPresent(anthologySubOrder, forKey: .anthologySubOrder)
+        try c.encodeIfPresent(libraryFolderId, forKey: .libraryFolderId)
+        try c.encode(libraryFolderSortKey, forKey: .libraryFolderSortKey)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)
     }
