@@ -175,13 +175,18 @@ struct HorizontalReaderPager: View {
         .onAppear {
             syncReelToSelection()
         }
-        .onChange(of: selectionId) { _, _ in
+        .onChange(of: selectionId) { _, newId in
             syncReelToSelection()
             var tr = Transaction()
             tr.disablesAnimations = true
             withTransaction(tr) {
                 dragTranslation = 0
             }
+            NotificationCenter.default.post(
+                name: .readerPagerActiveDocumentDidChange,
+                object: nil,
+                userInfo: [ReaderPagerNotificationKeys.documentId: newId]
+            )
         }
     }
 }

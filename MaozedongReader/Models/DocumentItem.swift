@@ -169,7 +169,17 @@ struct DocumentItem: Identifiable, Codable, Hashable {
 
     var isLikelyMarkdown: Bool {
         if let name = sourceFileName?.lowercased(), name.hasSuffix(".md") { return true }
-        let s = contentExternalized ? (contentPreview ?? "") : content
+        // Externalized bodies often have empty `content`; preview still reflects headings/lists for parsing + TTS.
+        let s: String
+        if contentExternalized {
+            if !content.isEmpty {
+                s = content
+            } else {
+                s = contentPreview ?? ""
+            }
+        } else {
+            s = content
+        }
         if s.contains("\n# ") || s.contains("\n## ") { return true }
         if s.hasPrefix("# ") || s.hasPrefix("## ") { return true }
         if s.contains("\n> ") || s.hasPrefix("> ") { return true }

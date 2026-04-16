@@ -80,6 +80,7 @@ MaozedongReader/
     SpeechSessionController.swift
     IdleTimerController.swift
   Views/
+    ReaderPagerNotifications.swift
     LibraryView.swift
     ReaderView.swift
     AppTypography.swift

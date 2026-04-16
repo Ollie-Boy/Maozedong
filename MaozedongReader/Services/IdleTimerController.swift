@@ -21,4 +21,9 @@ enum IdleTimerController {
         let disable = readingRouteActive || speechActive
         UIApplication.shared.isIdleTimerDisabled = disable
     }
+
+    /// Re-apply after scene phase changes (e.g. returning from background).
+    static func reapplyIdleTimerState() {
+        sync()
+    }
 }

@@ -6,6 +6,7 @@ struct MaozedongReaderApp: App {
     @StateObject private var store = DocumentStore()
     @StateObject private var speechSession = SpeechSessionController()
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
     @State private var navPath = NavigationPath()
 
     init() {
@@ -33,7 +34,16 @@ struct MaozedongReaderApp: App {
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)
             }
             .onChange(of: navPath.count) { _, _ in
-                IdleTimerController.setReadingRouteActive(!navPath.isEmpty)
+                let inReader = !navPath.isEmpty
+                IdleTimerController.setReadingRouteActive(inReader)
+                if !inReader {
+                    speechSession.stop()
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    IdleTimerController.reapplyIdleTimerState()
+                }
             }
             .onChange(of: store.readingPreferences.theme) { _, _ in
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)

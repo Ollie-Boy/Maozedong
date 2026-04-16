@@ -88,12 +88,10 @@ extension SpeechSessionController: AVSpeechSynthesizerDelegate {
         IdleTimerController.setSpeechPlaybackActive(false)
     }
 
+    /// Stopping one utterance to start another posts `didCancel`; must not clear follow mode or page switches break TTS.
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         isSpeaking = false
         speakingDocumentId = nil
-        if !isChainingNewUtterance {
-            followActiveDocumentForTTS = false
-        }
         IdleTimerController.setSpeechPlaybackActive(false)
     }
 }

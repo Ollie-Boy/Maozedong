@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 private struct ScrollContentMinYKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
@@ -204,6 +205,9 @@ struct ReaderView: View {
                 store.recordLastOpenedDocument(documentId: document.id)
             }
             loadBodyIfNeeded()
+            if presentsNavigationChrome {
+                restartSpeechForActivePageIfNeeded()
+            }
         }
         .onChange(of: presentsNavigationChrome) { _, chrome in
             if chrome {
@@ -247,6 +251,12 @@ struct ReaderView: View {
             blockFramesDebounceTask = nil
             let utf16 = currentProgressUTF16(blocks: blocks) ?? store.progressUTF16Offset(for: document.id) ?? 0
             store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .readerPagerActiveDocumentDidChange)) { note in
+            guard presentsNavigationChrome,
+                  let raw = note.userInfo?[ReaderPagerNotificationKeys.documentId] as? UUID,
+                  raw == document.id else { return }
+            restartSpeechForActivePageIfNeeded()
         }
     }
 
