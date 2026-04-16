@@ -102,15 +102,15 @@ struct ReaderView: View {
                         }
 
                         Button {
-                            if speechSession.isSpeaking {
+                            if speechSession.isSpeechSessionActive {
                                 speechSession.stop()
                             } else {
                                 speechSession.speak(speechPlainText, sourceDocumentId: document.id)
                             }
                         } label: {
                             Label(
-                                speechSession.isSpeaking ? "停止朗读" : "朗读",
-                                systemImage: speechSession.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
+                                speechSession.isSpeechSessionActive ? "停止朗读" : "朗读",
+                                systemImage: speechSession.isSpeechSessionActive ? "stop.fill" : "speaker.wave.2.fill"
                             )
                         }
 
@@ -403,14 +403,20 @@ struct ReaderView: View {
         }
     }
 
-    /// When TTS is running and the user makes another article the active page, read that article instead.
+    /// While 朗读 follow mode is on, switching the active pager page reads that page (poetry + anthology).
     private func restartSpeechForActivePageIfNeeded() {
         guard presentsNavigationChrome else { return }
-        guard speechSession.isSpeechSessionActive,
-              let prior = speechSession.speakingDocumentId,
-              prior != document.id else { return }
-        let text = synthesizedSpeechPlainText()
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard speechSession.followActiveDocumentForTTS else { return }
+        let text = synthesizedSpeechPlainText().trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty {
+            if speechSession.speakingDocumentId != document.id {
+                speechSession.silencePlaybackPreservingFollow()
+            }
+            return
+        }
+        if speechSession.speakingDocumentId == document.id, speechSession.isSpeechSessionActive {
+            return
+        }
         speechSession.speak(text, sourceDocumentId: document.id)
     }
 

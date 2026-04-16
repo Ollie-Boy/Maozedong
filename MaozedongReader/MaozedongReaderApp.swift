@@ -23,16 +23,17 @@ struct MaozedongReaderApp: App {
         WindowGroup {
             NavigationStack(path: $navPath) {
                 LibraryView(path: $navPath)
-                    .background {
-                        ReadingIdleTimerBridge(path: $navPath)
-                    }
             }
             .environmentObject(store)
             .environmentObject(speechSession)
             .font(AppTypography.swiftUIFont(size: 17))
             .preferredColorScheme(store.readingPreferences.preferredColorSchemeResolved(environmentScheme: colorScheme))
             .onAppear {
+                IdleTimerController.setReadingRouteActive(!navPath.isEmpty)
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)
+            }
+            .onChange(of: navPath.count) { _, _ in
+                IdleTimerController.setReadingRouteActive(!navPath.isEmpty)
             }
             .onChange(of: store.readingPreferences.theme) { _, _ in
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)

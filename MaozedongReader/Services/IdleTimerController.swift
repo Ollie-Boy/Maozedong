@@ -3,16 +3,12 @@ import UIKit
 /// Central place to toggle `UIApplication.isIdleTimerDisabled` while reading or during speech playback.
 @MainActor
 enum IdleTimerController {
-    private static var readingDepth = 0
+    /// True while the root `NavigationStack` has pushed a reader route (library is not the only screen).
+    private static var readingRouteActive = false
     private static var speechActive = false
 
-    static func pushReadingSession() {
-        readingDepth += 1
-        sync()
-    }
-
-    static func popReadingSession() {
-        readingDepth = max(0, readingDepth - 1)
+    static func setReadingRouteActive(_ active: Bool) {
+        readingRouteActive = active
         sync()
     }
 
@@ -22,7 +18,7 @@ enum IdleTimerController {
     }
 
     private static func sync() {
-        let disable = readingDepth > 0 || speechActive
+        let disable = readingRouteActive || speechActive
         UIApplication.shared.isIdleTimerDisabled = disable
     }
 }
