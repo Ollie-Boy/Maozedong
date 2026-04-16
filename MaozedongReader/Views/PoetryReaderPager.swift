@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Horizontal paging between poetry items in chronological (display) order.
+/// Horizontal paging through poetry in display sort order.
 struct PoetryReaderPager: View {
     @EnvironmentObject private var store: DocumentStore
 

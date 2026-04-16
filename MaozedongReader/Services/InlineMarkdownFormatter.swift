@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum InlineMarkdownFormatter {
-    /// Plain text for VoiceOver (strips inline `**` / `` ` `` markup).
+    /// Plain text for VoiceOver (strips inline bold and code markup).
     static func accessibilityLineDescription(_ line: String) -> String {
         var t = line.replacingOccurrences(of: "**", with: "")
         while let open = t.firstIndex(of: "`") {
@@ -13,7 +13,7 @@ enum InlineMarkdownFormatter {
         return t.trimmingCharacters(in: .whitespaces)
     }
 
-    /// Renders a single line with `**bold**` and `` `code` `` spans into an `AttributedString`.
+    /// Renders one line of inline markdown into an attributed string.
     static func attributedLine(
         _ line: String,
         baseFontSize: CGFloat,

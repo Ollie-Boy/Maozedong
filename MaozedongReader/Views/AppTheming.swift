@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension ReadingPreferences.Theme {
-    /// Drives system chrome when not using `followSystemAppearance` / night auto.
+    /// Color scheme for system chrome when theme is manual.
     var preferredColorScheme: ColorScheme? {
         switch self {
         case .light, .sepia: return .light
@@ -11,16 +11,15 @@ extension ReadingPreferences.Theme {
 }
 
 extension ReadingPreferences {
-    /// Match page background so grouped list rows do not show as bright white cards (esp. newer iOS).
+    /// List row background aligned with page background.
     var listRowBackgroundColor: Color {
         backgroundColor
     }
 
-    /// Soft top color for library ambient gradient (pairs with `libraryGradientBottom`).
+    /// Library gradient top color.
     var libraryGradientTop: Color {
         switch theme {
         case .light:
-            /// Barely-there sky blue → white (top is slightly more blue).
             return Color(red: 0.93, green: 0.965, blue: 0.995)
         case .dark:
             return Color(red: 0.12, green: 0.11, blue: 0.14)
@@ -46,11 +45,10 @@ extension ReadingPreferences {
         }
     }
 
-    /// Thin accent for section markers / card strokes (not loud).
+    /// Accent for section markers and card strokes.
     var libraryAccentColor: Color {
         switch theme {
         case .light:
-            /// Clear sky blue on the cool canvas (not desaturated / gray).
             return Color(red: 0.28, green: 0.58, blue: 0.96)
         case .dark:
             return Color(red: 0.95, green: 0.72, blue: 0.45)
@@ -59,7 +57,7 @@ extension ReadingPreferences {
         }
     }
 
-    /// Slightly lifted fill so bordered search fields stay readable on the list canvas.
+    /// Search field fill on list background.
     var searchFieldFill: Color {
         switch theme {
         case .light:
@@ -84,7 +82,7 @@ extension ReadingPreferences {
 }
 
 extension View {
-    /// Full rounded-rect border around inline search `TextField` rows (library + reader sheets).
+    /// Rounded rect chrome for inline search fields.
     func searchQueryFieldChrome(_ preferences: ReadingPreferences) -> some View {
         padding(.horizontal, 12)
             .padding(.vertical, 10)

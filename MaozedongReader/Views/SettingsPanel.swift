@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 struct SettingsPanel: View {
     @EnvironmentObject private var store: DocumentStore
     @Binding var preferences: ReadingPreferences
-    /// When true, any pending debounced preferences write is flushed when this view disappears (e.g. sheet dismissed).
+    /// When true, flush debounced preference disk write on dismiss.
     var flushPreferencesOnDismiss: Bool = false
 
     @State private var showExportShare = false

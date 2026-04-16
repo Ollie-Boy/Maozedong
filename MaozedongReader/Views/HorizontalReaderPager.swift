@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Three-column strip with **finger-driven horizontal offset** (ebook-style): drag shows the next/prev page moving in;
-/// release completes past ~20% width, a distance threshold, or a quick flick; otherwise eases back to center.
+/// Horizontal three-slot pager: drag offset follows the finger; release past thresholds commits or snaps back.
 struct HorizontalReaderPager: View {
     let documents: [DocumentItem]
     @Binding var selectionId: UUID
@@ -10,7 +9,6 @@ struct HorizontalReaderPager: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var reelSlots: [UUID?] = [nil, nil, nil]
-    /// Added to resting offset `-pageWidth` so the strip follows the finger during a horizontal drag.
     @State private var dragTranslation: CGFloat = 0
     @State private var horizontalDragActive = false
     @State private var dragStartX: CGFloat = 0
@@ -101,7 +99,6 @@ struct HorizontalReaderPager: View {
                     .frame(width: W, height: H, alignment: .leading)
                     .clipped()
                     .contentShape(Rectangle())
-                    // Run alongside inner vertical ScrollView: only after we lock horizontal does translation drive the strip.
                     .simultaneousGesture(
                         DragGesture(minimumDistance: 10, coordinateSpace: .local)
                             .onChanged { value in

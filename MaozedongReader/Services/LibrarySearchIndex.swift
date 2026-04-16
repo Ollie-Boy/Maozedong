@@ -1,11 +1,11 @@
 import Foundation
 
-/// Inverted bigram/trigram index over title + preview prefix for fast library search (verify with real `range(of:)`).
+/// Inverted bigram/trigram index over title and preview; candidates verified by full string search.
 struct LibrarySearchIndex: Sendable {
     private let bigramToIds: [String: Set<UUID>]
     private let trigramToIds: [String: Set<UUID>]
 
-    /// Characters of `textForLibrarySearch` indexed per document (keep moderate for build time).
+    /// Max characters of body preview indexed per document.
     static let indexPreviewCharCount = 12_000
 
     nonisolated static func build(rows: [(id: UUID, title: String, preview: String)]) -> LibrarySearchIndex {
@@ -32,7 +32,7 @@ struct LibrarySearchIndex: Sendable {
         return LibrarySearchIndex(bigramToIds: bigram, trigramToIds: trigram)
     }
 
-    /// `nil` means caller should linear-scan (e.g. single-character query).
+    /// `nil`: caller should scan all documents (short or empty query).
     nonisolated func candidateIds(for rawQuery: String) -> Set<UUID>? {
         let q = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return [] }

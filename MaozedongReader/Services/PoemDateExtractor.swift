@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pulls a sortable (year, month, day) from the first lines of poem body text (after the `序号 标题` line).
+/// Sortable (year, month, day) from the first lines of poem body after the title line.
 enum PoemDateExtractor {
     private static let lunarMonthNames: [String: Int] = [
         "正月": 1, "二月": 2, "三月": 3, "四月": 4, "五月": 5, "六月": 6,
@@ -29,7 +29,7 @@ enum PoemDateExtractor {
             return (y, seasonMonth(in: head) ?? lunarMonth(in: head), explicitDay(in: head))
         }
 
-        // e.g. corpus lines `1954夏` / `1965秋` (no `年`); also bare `1954` on its own meta line.
+        // Year without 年 suffix, or bare four-digit year on first meta line.
         if let firstLine = lines.first,
            let y = fourDigitYearWithoutRequiredNian(in: firstLine) {
             let m = explicitMonth(in: head) ?? seasonMonth(in: head) ?? lunarMonth(in: head)
@@ -88,7 +88,7 @@ enum PoemDateExtractor {
         return y
     }
 
-    /// `1954夏`, `1965秋`, or a lone `1954` on the first meta line (no `年` required).
+    /// Four-digit year optionally followed by 春夏秋冬, or a lone year line.
     private static func fourDigitYearWithoutRequiredNian(in line: String) -> Int? {
         let t = line.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return nil }

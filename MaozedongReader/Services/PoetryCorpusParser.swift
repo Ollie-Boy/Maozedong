@@ -1,6 +1,6 @@
 import Foundation
 
-/// Parses bundled plain text: each work starts with `序号 标题` (e.g. `28 沁园春·长沙`).
+/// Parses bundled plain text; each work begins with a numbered title line.
 enum PoetryCorpusParser {
     static func documents(from raw: String, category: DocumentCategory = .poetry) -> [DocumentItem] {
         let text = raw
@@ -117,7 +117,7 @@ enum PoetryCorpusParser {
         """
     }
 
-    /// Strips `注释：` / `注释:` from every line; returns nil if nothing left (omit 注释 block entirely).
+    /// Strips 注释 prefixes from each line; returns nil if no content remains.
     private static func annotationDisplayText(from note: String) -> String? {
         let raw = note.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let cleaned: [String] = raw.map { line in

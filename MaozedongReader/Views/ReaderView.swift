@@ -25,9 +25,9 @@ struct ReaderView: View {
     @EnvironmentObject private var store: DocumentStore
 
     let document: DocumentItem
-    /// When false (e.g. horizontal pager siblings), do not register nav items so only the active page owns the navigation bar.
+    /// When false, omit nav/toolbar so only the active pager slot owns chrome.
     var presentsNavigationChrome: Bool = true
-    /// While the horizontal pager is dragging or finishing a page turn, lock vertical scroll on **all** slots (left/center/right).
+    /// Lock vertical scroll on all pager slots during horizontal page drag.
     var lockVerticalScrollWhilePaging: Bool = false
     @State private var showingSettings = false
     @State private var showingTOC = false
@@ -49,11 +49,11 @@ struct ReaderView: View {
     @State private var scrollToBlockId: UUID?
     @State private var progressSaveTask: Task<Void, Never>?
     @State private var expandedNoteBlockIds: Set<UUID> = []
-    /// Filled asynchronously when `document.contentExternalized` (body on disk, not in `documents.json`).
+    /// Loaded full body when content is externalized.
     @State private var loadedBody: String?
 
     private let scrollSpaceName = "readerScroll"
-    /// Coalesce hundreds of per-block preference merges while vertically scrolling long articles.
+    /// Debounce block-frame preference updates during vertical scroll.
     private static let blockFramesDebounceNs: UInt64 = 90_000_000
 
     private var readerSourceText: String {
@@ -271,9 +271,7 @@ struct ReaderView: View {
                             blockView(item)
                                 .id(item.id)
                                 .background {
-                                    // Per-block frames are only needed for fine-grained reading progress on the
-                                    // active page. Sibling ReaderViews in the horizontal pager would otherwise
-                                    // merge hundreds of preferences on every vertical scroll → high CPU when swiping fast.
+                                    // Block frames for progress: active pager page only (siblings would spam preferences).
                                     if presentsNavigationChrome {
                                         GeometryReader { g in
                                             Color.clear
@@ -316,8 +314,7 @@ struct ReaderView: View {
                 .onPreferenceChange(ViewportHeightKey.self) { h in
                     if h > 1 { viewportHeight = h }
                 }
-                // Off-screen pager siblings still receive layout preferences; saving progress from every page
-                // republished `readerState` and caused a feedback loop (freeze / 100% CPU).
+                // Save progress only from the active page to avoid republishing reader state from hidden slots.
                 .onChange(of: scrollContentMinY) { _, _ in
                     if presentsNavigationChrome { scheduleProgressSave(blocks: blocks) }
                 }
@@ -636,8 +633,7 @@ private extension View {
     }
 }
 
-/// iOS 18+ can show a transient empty nav bar / overlay when `navigationTitle` is empty during pager transitions.
-/// Pager siblings use a single-space system title plus a custom `.principal` title (see commit 466fc85).
+/// Navigation title chrome for the embedded horizontal pager.
 private struct ReaderBarTitleModifier: ViewModifier {
     let title: String
     let useToolbarPrincipal: Bool

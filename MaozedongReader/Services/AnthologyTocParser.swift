@@ -1,17 +1,17 @@
 import Foundation
 
-/// Parses `Resources/AnthologyTOC.md` (same structure as upstream `目录.md`).
+/// Parses bundled anthology table-of-contents markdown.
 enum AnthologyTocParser {
     struct Entry {
-        /// 二级分组标题（`##` 小节名）；无小节时与 `majorTitle` 相同。
+        /// Subsection title; equals major title when the TOC has no subsection.
         let sectionTitle: String
-        /// 卷级标题（`#` 行），用于书库一级分组。
+        /// Major volume title for library grouping.
         let majorTitle: String
         let majorOrder: Int
         let subOrder: Int
     }
 
-    /// Key: file name only, e.g. `000-中国社会各阶级的分析.md`
+    /// Index key is the markdown file name without path.
     static func indexByFileName(bundle: Bundle) -> [String: Entry] {
         guard let url = bundle.url(forResource: "AnthologyTOC", withExtension: "md", subdirectory: "Resources")
             ?? bundle.url(forResource: "AnthologyTOC", withExtension: "md", subdirectory: nil) else {

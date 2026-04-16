@@ -22,8 +22,7 @@ struct ImportedTextFile {
 }
 
 enum ImportedFileEncoding {
-    /// GB18030 via CoreFoundation (numeric code: same as `kCFStringEncodingGB_18030_2000`).
-    /// Some toolchains omit both the Swift `String.Encoding` alias and the C macro in scope.
+    /// GB18030 via CoreFoundation numeric encoding when Swift has no named alias.
     static var gb18030: String.Encoding? {
         let cf: CFStringEncoding = 0x0632 // GB18030-2000
         let ns = CFStringConvertEncodingToNSStringEncoding(cf)
@@ -72,7 +71,6 @@ enum PlainTextFileImporter {
         return ImportedTextFile(title: fileName, content: text)
     }
 
-    // Keep a string-only helper for call sites that only need content.
     static func read(from url: URL) throws -> String {
         try parse(url: url).content
     }

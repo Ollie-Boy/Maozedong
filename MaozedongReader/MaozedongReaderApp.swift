@@ -9,10 +9,8 @@ struct MaozedongReaderApp: App {
 
     init() {
         AppFonts.registerBundledFontsIfNeeded()
-        // Do not set UILabel / UITextField / UITextView / UIButton UIAppearance fonts: SwiftUI Text is backed by
-        // UILabels, and forcing every label to use the bundled CJK serif caused severe jank and climbing memory
-        // after commit 425056d. Reader text still uses the embedded font via ReaderTypography / AttributedString;
-        // the root SwiftUI `.font` below covers most on-screen UI without touching every system label.
+        // Avoid global UIAppearance fonts on labels/text fields: bundled serif on every UILabel caused jank.
+        // Reader uses embedded font via ReaderTypography; root `.font` covers most SwiftUI chrome.
         let semibold = AppTypography.uiFont(size: 17, weight: .semibold)
         UINavigationBar.appearance().titleTextAttributes = [.font: semibold]
         UINavigationBar.appearance().largeTitleTextAttributes = [.font: AppTypography.uiFont(size: 34, weight: .bold)]

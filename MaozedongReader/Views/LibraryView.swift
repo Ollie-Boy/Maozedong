@@ -5,7 +5,7 @@ private struct LibrarySectionHeaderView: View {
     let title: String
     let count: Int
     let expanded: Bool
-    /// Extra leading inset (e.g. nested 选集分期 under a volume).
+    /// Extra leading inset for nested anthology rows.
     var leadingInset: CGFloat = 0
 
     var body: some View {
@@ -291,7 +291,6 @@ struct LibraryView: View {
 
     var body: some View {
         ZStack {
-            // One canvas color with nav + toolbar + list (no separate gradient “card” vs chrome).
             store.readingPreferences.backgroundColor
                 .allowsHitTesting(false)
                 .ignoresSafeArea()
@@ -366,8 +365,7 @@ struct LibraryView: View {
             }
         }
         .navigationTitle("学习课本")
-        // Large title area has regressed on newer iOS as a non-interactive overlay blocking the first list rows
-        // (e.g. “继续阅读”); inline title avoids the ghost hit-stealer while keeping the same toolbar chrome.
+        // Inline large title avoids a known iOS overlay stealing taps on the first list rows.
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(store.readingPreferences.backgroundColor, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -562,7 +560,7 @@ struct LibraryView: View {
     @ViewBuilder
     private func anthologyMajorSection(major: AnthologyMajorGroup) -> some View {
         let majorCollapsed = collapsedAnthologyMajors.contains(major.id)
-        // Use Group (not nested Section) so volume / subsection titles never use UITableView sticky header chrome.
+        // Group avoids nested `Section` sticky UITableView header styling for volume headers.
         Group {
             Button {
                 if majorCollapsed {
@@ -726,7 +724,7 @@ struct LibraryView: View {
     }
 }
 
-// MARK: - Full-screen search (avoids `.searchable` embedding UISearchController in a huge nested List)
+// MARK: - Full-screen search
 
 struct LibraryFullSearchView: View {
     @EnvironmentObject private var store: DocumentStore

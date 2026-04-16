@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Body text uses embedded Noto Serif CJK SC (Song-style print); see `Resources/Fonts` + SIL license.
+/// Reader body fonts via embedded Noto Serif CJK SC.
 enum ReaderTypography {
     static func bodyFont(size: CGFloat, weight: Font.Weight = .regular) -> Font {
         AppTypography.swiftUIFont(size: size, weight: weight)

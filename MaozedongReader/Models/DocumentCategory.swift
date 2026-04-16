@@ -6,7 +6,7 @@ enum DocumentCategory: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    /// Library section titles (no SF Symbol in headers — text only).
+    /// Library section display title.
     var displayName: String {
         switch self {
         case .poetry: return "毛泽东诗词"

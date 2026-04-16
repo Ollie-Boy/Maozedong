@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// App-wide UI font: embedded Song-style print serif (Noto Serif CJK SC), fallback to system serif.
+/// App-wide UI fonts using embedded Noto Serif CJK SC with system fallback.
 enum AppTypography {
     static func uiFont(size: CGFloat, weight: UIFont.Weight = .regular) -> UIFont {
         AppFonts.registerBundledFontsIfNeeded()

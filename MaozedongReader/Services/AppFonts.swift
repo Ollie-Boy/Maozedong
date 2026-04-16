@@ -3,9 +3,9 @@ import CoreText
 import Foundation
 import UIKit
 
-/// Registers bundled print-style Song serif (Noto Serif CJK SC) for `ReaderTypography` / `AppTypography`.
+/// Registers bundled Noto Serif CJK SC for app typography.
 enum AppFonts {
-    /// PostScript name inside `NotoSerifCJKsc-Regular.otf` (SIL Open Font License 1.1).
+    /// PostScript name of the bundled regular font file.
     static let bundledPrintSerifPostScriptName = "NotoSerifCJKsc-Regular"
 
     private static let didRegisterLock = NSLock()

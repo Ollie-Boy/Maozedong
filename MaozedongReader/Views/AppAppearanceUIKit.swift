@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Global UIKit chrome so navigation, search bars, and TabView footers match the reading theme.
+/// Syncs global UIKit navigation and list chrome with reading theme colors.
 enum AppAppearanceUIKit {
     static func syncGlobalChrome(preferences: ReadingPreferences, environmentScheme: ColorScheme) {
         let theme = preferences.resolvedChromeTheme(environmentScheme: environmentScheme)
@@ -28,24 +28,17 @@ enum AppAppearanceUIKit {
         UISearchBar.appearance().tintColor = label
         UISearchBar.appearance().barTintColor = bg
 
-        // Do not customize UITextField inside UISearchBar (layout cost + past iOS crashes with UIAppearance).
-
-        // Do not use UISearchTextField.appearance(...): setSpellCheckingType / backgroundColor etc.
-        // crash on newer iOS when applied via UIAppearance (SwiftUI .searchable).
+        // Avoid UISearchBar / UISearchTextField UIAppearance tweaks (performance and SDK fragility).
 
         let rowUICol = uiBackground(for: theme, sepiaWarm: preferences.sepiaWarmTint)
 
-        // Plain SwiftUI `List` still shows default white behind section chrome unless the table view is tinted.
         UITableView.appearance().backgroundColor = rowUICol
         UITableView.appearance().separatorColor = UIColor.separator.withAlphaComponent(theme == .dark ? 0.35 : 0.25)
 
-        // SwiftUI `.listStyle(.plain)` uses plain table cells; `listGroupedCell()` forces grouped chrome → white rows.
         var cellBg = UIBackgroundConfiguration.listPlainCell()
         cellBg.backgroundColor = rowUICol
         UITableViewCell.appearance().backgroundConfiguration = cellBg
 
-        // SwiftUI `List` section headers use UITableViewHeaderFooterView; `.clear()` lets the default white show
-        // through. UIBackgroundConfiguration() is not public — start from `.clear()` then set the fill color.
         var headerFooterBg = UIBackgroundConfiguration.clear()
         headerFooterBg.backgroundColor = rowUICol
         UITableViewHeaderFooterView.appearance().backgroundConfiguration = headerFooterBg

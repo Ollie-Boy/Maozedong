@@ -1,10 +1,10 @@
 import Foundation
 
-/// Splits “时间/元信息”与正文首句（诗词：首行内日期+诗句；选集：# 标题后括号日期行）。
+/// Splits date/meta from poem or anthology lead lines before body text.
 enum LeadLayoutNormalizer {
     // MARK: - Poetry (plain text main, before 注释)
 
-    /// Returns optional second-line meta (bold in Markdown) and remaining poem body.
+    /// Optional meta line and remaining poem body after leading layout normalization.
     static func splitPoetryMetaAndBody(mainRaw: String) -> (meta: String?, body: String) {
         let rawLines = mainRaw.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         var lines = rawLines.map { $0.trimmingCharacters(in: .whitespaces) }
@@ -28,7 +28,7 @@ enum LeadLayoutNormalizer {
         return (nil, mainRaw.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    /// Corpus sometimes splits a range across lines, e.g. `1945年` then `至1946年` then body — merge into one meta line.
+    /// Merge split year-range meta lines into one line when separated by a blank line.
     private static func mergeSplitYearRangeMeta(into lines: inout [String]) {
         let yearOnly = #"^\d{4}\s*年\s*$"#
         let toYearOnly = #"^(?:至|到)\s*\d{4}\s*年\s*$"#
@@ -57,7 +57,6 @@ enum LeadLayoutNormalizer {
         return parts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// "1902年正月 狮子眼鼓鼓，…" → meta + body fragment
     private static func splitDatePrefixFromLine(_ line: String) -> (meta: String, body: String)? {
         let t = line.trimmingCharacters(in: .whitespaces)
         guard let range = t.range(of: "\\s+", options: .regularExpression) else { return nil }
@@ -69,7 +68,7 @@ enum LeadLayoutNormalizer {
         return (left, right)
     }
 
-    /// e.g. `1949年4月七律·人民解放军占领南京`（日期与诗句之间无空格）
+    /// Same-line date prefix glued to poem text without a separating space.
     private static func splitDateGluedToPoemLine(_ line: String) -> (meta: String, body: String)? {
         let t = line.trimmingCharacters(in: .whitespaces)
         guard let re = try? NSRegularExpression(
@@ -107,7 +106,6 @@ enum LeadLayoutNormalizer {
     private static func isStandalonePoetryMetaLine(_ line: String) -> Bool {
         let t = line.trimmingCharacters(in: .whitespaces)
         if t.isEmpty { return false }
-        // Full calendar date on its own line, e.g. 1919年3月12日、1918年8月17日
         if t.range(of: #"^\d{4}年\d{1,2}月\d{1,2}日$"#, options: .regularExpression) != nil {
             return true
         }

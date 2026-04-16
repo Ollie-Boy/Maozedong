@@ -1,7 +1,7 @@
 import Foundation
 
 extension DocumentItem {
-    /// Stable order for list UI: poetry by time, then corpus index; anthology by title.
+    /// Library list sort: poetry by date then corpus index; anthology by TOC order then title.
     static func displaySort(_ a: DocumentItem, _ b: DocumentItem) -> Bool {
         if a.category != b.category {
             return a.category.sortOrder < b.category.sortOrder

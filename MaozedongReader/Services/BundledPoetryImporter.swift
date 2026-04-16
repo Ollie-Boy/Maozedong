@@ -15,7 +15,7 @@ enum BundledPoetryImporter {
         return PoetryCorpusParser.documents(from: trimmed, category: .poetry)
     }
 
-    /// Xcode copies target resources to the **bundle root** by default, not into a `Resources/` folder.
+    /// Loads corpus from bundle subdirectory or root (Xcode may flatten resources).
     private static func loadRawCorpusText(from bundle: Bundle) -> String {
         func loadSingleFile(name: String, ext: String, subdirectory: String?) -> String? {
             guard let url = bundle.url(forResource: name, withExtension: ext, subdirectory: subdirectory),

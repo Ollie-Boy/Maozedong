@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Horizontal paging between anthology items in the same **library display order** as poetry:
-/// all 选集篇目可左右滑动切换（不再限制在同一卷内 `##` 分组）。
+/// Horizontal paging through anthology items in library display order (all volumes).
 struct AnthologyReaderPager: View {
     @EnvironmentObject private var store: DocumentStore
 

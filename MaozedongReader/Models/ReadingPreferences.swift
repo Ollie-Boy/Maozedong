@@ -3,18 +3,18 @@ import SwiftUI
 struct ReadingPreferences: Codable, Equatable {
     var fontSize: Double
     var lineSpacing: Double
-    /// Extra vertical gap between Markdown blocks (headings, paragraphs, lists).
+    /// Extra vertical gap between Markdown blocks in the reader.
     var readerBlockSpacing: Double
     /// Horizontal inset for reading column (pt).
     var readerHorizontalPadding: Double
-    /// 0 = full width; otherwise max content width for long lines (pt), centered on iPad/wide phones.
+    /// Zero means full width; otherwise max reader column width in points.
     var readerMaxColumnWidth: Double
     var theme: Theme
-    /// 护眼偏暖（略深、略黄），仅在选择「护眼」时生效。
+    /// Warmer sepia tint when the sepia theme is selected.
     var sepiaWarmTint: Bool
-    /// 22:00–07:00 自动使用深色（需未勾选跟随系统）。
+    /// Use dark theme during night hours when not following system appearance.
     var autoDarkAtNight: Bool
-    /// 使用系统浅色/深色，忽略下方手动主题（护眼仍为手动）。
+    /// Use system light or dark appearance instead of the manual theme picker.
     var followSystemAppearance: Bool
 
     init(
@@ -60,7 +60,6 @@ struct ReadingPreferences: Codable, Equatable {
         var backgroundColor: Color {
             switch self {
             case .light:
-                /// App Store–like very light cool blue (slightly more blue than red/green so it reads fresh, not gray).
                 return Color(red: 0.945, green: 0.968, blue: 0.995)
             case .dark:
                 return Color.black

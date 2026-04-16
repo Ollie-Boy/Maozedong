@@ -13,7 +13,7 @@ final class DocumentStore: ObservableObject {
     }
     @Published private(set) var readerState: ReaderStateSnapshot = .empty
     @Published var errorMessage: String?
-    /// Set when `librarySearchIndex` has finished building for current `documents` (UI may show faster path).
+    /// True after the library search index finishes building for the current documents.
     @Published private(set) var librarySearchIndexReady = false
 
     private var librarySearchIndex: LibrarySearchIndex?
@@ -23,7 +23,7 @@ final class DocumentStore: ObservableObject {
     private var lastOpenedDocumentTask: Task<Void, Never>?
     private var pendingLastOpenedDocumentId: UUID?
     private var readingPreferencesDiskTask: Task<Void, Never>?
-    /// Skip persisting when assigning preferences loaded from disk (avoid rewrite-on-launch).
+    /// Suppresses preference disk writes while loading from disk.
     private var readingPreferencesPersistenceDepth = 0
 
     private let fileManager = FileManager.default
@@ -49,9 +49,9 @@ final class DocumentStore: ObservableObject {
         documentsDirectory.appendingPathComponent("ArticleBodies", isDirectory: true)
     }
 
-    /// Bodies at or above this UTF-8 size are stored in `ArticleBodies/{uuid}.txt`; JSON keeps metadata + preview only.
+    /// Externalize bodies at or above this UTF-8 size to disk; JSON keeps metadata and preview only.
     private static let articleBodyExternalThreshold = 40 * 1024
-    /// Kept moderate: hundreds of externalized articles × preview still sits in `documents.json` in RAM.
+    /// Max characters of preview text kept in JSON per externalized document.
     private static let articleBodyPreviewMaxChars = 24_000
 
     private var readingPreferencesURL: URL {
@@ -83,7 +83,7 @@ final class DocumentStore: ObservableObject {
         scheduleRebuildLibrarySearchIndex()
     }
 
-    /// Documents to scan for `query`: full list when index is building or query is one character; narrowed set when index can prune.
+    /// Candidate documents for a library search query (full scan when index unavailable).
     func librarySearchDocumentsToScan(for query: String) -> [DocumentItem] {
         guard let index = librarySearchIndex else { return documents }
         guard let idSet = index.candidateIds(for: query) else { return documents }
@@ -203,7 +203,7 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    /// Merges bundled poetry corpus (by title) so app updates add new works without wiping the library.
+    /// Merges bundled poetry by title without wiping user edits.
     private func mergeBundledPoetryIfNeeded() {
         guard !isPreviewMode else { return }
 
@@ -366,7 +366,7 @@ final class DocumentStore: ObservableObject {
         scheduleReaderStateDiskWrite()
     }
 
-    /// Batches rapid horizontal pager changes so `readerState` does not republish on every scroll tick (high CPU / Energy).
+    /// Debounces last-opened document writes during fast pager swipes.
     func scheduleRecordLastOpenedDocument(documentId: UUID) {
         guard !isPreviewMode else { return }
         pendingLastOpenedDocumentId = documentId
@@ -380,7 +380,7 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    /// Call when leaving the reader stack so the last swiped article is recorded immediately.
+    /// Flush pending last-opened document before leaving the reader stack.
     func flushLastOpenedDocumentSchedule() {
         lastOpenedDocumentTask?.cancel()
         lastOpenedDocumentTask = nil
@@ -395,7 +395,7 @@ final class DocumentStore: ObservableObject {
         return documents.first { $0.id == id }
     }
 
-    /// Inline externalized bodies so backups restore on a fresh install without `ArticleBodies/`.
+    /// Inlines externalized body text into the backup payload.
     private func documentForBackup(_ d: DocumentItem) -> DocumentItem {
         var x = d
         guard x.contentExternalized else { return x }
@@ -406,7 +406,7 @@ final class DocumentStore: ObservableObject {
         return x
     }
 
-    /// Exports `documents.json` + `reader_state.json` + `reading_preferences.json` into one JSON file (offline backup).
+    /// Exports documents, folders, reader state, and preferences as one JSON file.
     func exportBackupData() throws -> Data {
         let payload = BackupPayload(
             documents: documents.map(documentForBackup),
@@ -421,7 +421,7 @@ final class DocumentStore: ObservableObject {
         return try enc.encode(payload)
     }
 
-    /// Replaces library + reader state + preferences from a backup file.
+    /// Restores library, folders, reader state, and preferences from backup JSON.
     func importBackup(data: Data) throws {
         guard !isPreviewMode else { return }
         let dec = JSONDecoder()
@@ -444,7 +444,7 @@ final class DocumentStore: ObservableObject {
         readerState.progressUTF16ByDocumentId[documentId]
     }
 
-    /// Call when closing a settings UI so the last slider tick is not still pending in the debounce window.
+    /// Writes any pending preference changes immediately.
     func flushReadingPreferencesToDisk() {
         persistReadingPreferencesToDiskNow()
     }
@@ -477,7 +477,7 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    /// Batches rapid progress / “last opened” updates so scrolling and pager switches do not sync JSON on every event.
+    /// Debounces reader state disk writes during scroll and pager activity.
     private func scheduleReaderStateDiskWrite() {
         guard !isPreviewMode else { return }
         readerStateDiskTask?.cancel()
@@ -530,7 +530,7 @@ final class DocumentStore: ObservableObject {
         try data.write(to: libraryFoldersURL, options: .atomic)
     }
 
-    /// Keeps `libraryFolderSortKey` in sync with folder list (and drops stale folder ids).
+    /// Syncs document folder sort keys with the folder list; clears invalid folder references.
     private func syncDocumentLibraryFolderSortKeysFromFoldersIfNeeded() {
         guard !isPreviewMode else { return }
         var changed = false
@@ -662,7 +662,7 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    /// Full article text for reading / export. Inline `content` or UTF-8 file in `ArticleBodies/`.
+    /// Full article body for reading or export (inline or external file).
     func resolvedBody(for item: DocumentItem) -> String? {
         if !item.contentExternalized {
             return item.content
@@ -671,7 +671,7 @@ final class DocumentStore: ObservableObject {
         return try? String(contentsOf: url, encoding: .utf8)
     }
 
-    /// Read externalized body off the main actor (same path as `resolvedBody`).
+    /// Reads externalized body off the main actor.
     nonisolated static func readExternalizedBodyInBackground(id: UUID) -> String {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ArticleBodies", isDirectory: true)

@@ -8,7 +8,7 @@ struct MarkdownBlock: Identifiable, Equatable {
         case bullet(items: [String])
         case ordered(items: [String])
         case horizontalRule
-        /// Collapsed 注释 body (after `---` + `## 注释`); rendered as footnote-style region.
+        /// Collapsed annotation block; rendered as footnote-style region.
         case noteSection(lines: [String])
     }
 
@@ -141,7 +141,7 @@ enum MarkdownBlockParser {
         return postprocessPoetryNotes(blocks)
     }
 
-    /// Merges `---` + `## 注释` + following paragraphs into a single `.noteSection` for collapsible footnote UI.
+    /// Merges rule, level-2 注释 heading, and following lines into one note section block.
     private static func postprocessPoetryNotes(_ blocks: [MarkdownBlock]) -> [MarkdownBlock] {
         var out: [MarkdownBlock] = []
         var i = 0

@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension ReadingPreferences {
-    /// Theme used for nav bar / tab bar / tables (maps light/dark/sepia).
+    /// Resolved theme for navigation and list chrome.
     func resolvedChromeTheme(environmentScheme: ColorScheme) -> Theme {
         if theme == .sepia { return .sepia }
         if followSystemAppearance {

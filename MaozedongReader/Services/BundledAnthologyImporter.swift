@@ -1,6 +1,6 @@
 import Foundation
 
-/// Offline copy of weiyinfu/MaoZeDongAnthology `src/*.md` (folder reference → app bundle).
+/// Loads bundled anthology markdown from the app bundle.
 enum BundledAnthologyImporter {
     static let sourcePrefix = "bundledAnthology:"
 
@@ -46,7 +46,7 @@ enum BundledAnthologyImporter {
         return items
     }
 
-    /// `000-标题.md` → (0, "标题")
+    /// Parses numeric file prefix and title stem from filename.
     private static func parseFileName(_ name: String) -> (Int?, String) {
         guard name.lowercased().hasSuffix(".md") else { return (nil, name) }
         let base = String(name.dropLast(3))

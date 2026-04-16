@@ -1,8 +1,8 @@
 import Foundation
 
-/// Persisted scroll progress (UTF-16 offset into `DocumentItem.content`).
+/// Persisted reading progress and last opened document.
 struct ReaderStateSnapshot: Codable, Equatable {
-    /// Last read position per document (`documentId` → UTF-16 offset).
+    /// Per-document UTF-16 scroll offset into body text.
     var progressUTF16ByDocumentId: [UUID: Int]
     var lastOpenedDocumentId: UUID?
     var lastOpenedAt: Date?

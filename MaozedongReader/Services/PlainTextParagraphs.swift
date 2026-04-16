@@ -1,7 +1,7 @@
 import Foundation
 
 enum PlainTextParagraphs {
-    /// Paragraphs split on blank lines, with UTF-16 start offset in `fullText`.
+    /// Paragraph segments with UTF-16 start offsets in the source string.
     static func segments(from fullText: String) -> [(text: String, utf16Start: Int)] {
         let text = fullText
             .replacingOccurrences(of: "\r\n", with: "\n")

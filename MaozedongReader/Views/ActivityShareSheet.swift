@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Presents the system share sheet for saving or AirDropping files (avoids `fileExporter` API drift across SDKs).
+/// Presents the system share sheet for exported files.
 struct ActivityShareSheet: UIViewControllerRepresentable {
     var items: [Any]
 

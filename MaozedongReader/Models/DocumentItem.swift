@@ -3,29 +3,29 @@ import Foundation
 struct DocumentItem: Identifiable, Codable, Hashable {
     let id: UUID
     var title: String
-    /// Full body when `!contentExternalized`. When externalized, load from disk via `DocumentStore.resolvedBody(for:)`.
+    /// Inline body when not externalized; otherwise load via `DocumentStore.resolvedBody`.
     var content: String
-    /// Large bodies are stored in `ArticleBodies/{id}.txt` to keep `documents.json` small (avoids OOM on launch).
+    /// Large bodies are stored on disk; JSON keeps metadata and preview only.
     var contentExternalized: Bool
-    /// Prefix of body for list search / markdown heuristics when full `content` is not in memory.
+    /// Body prefix for search and markdown detection when full body is not in memory.
     var contentPreview: String?
     var sourceFileName: String?
     var category: DocumentCategory
-    /// Rough calendar fields for chronological sort (from corpus date line).
+    /// Calendar fields for chronological sort.
     var sortEpochYear: Int?
     var sortEpochMonth: Int?
     var sortEpochDay: Int?
-    /// Original corpus sequence number (1…n) when from bundled poetry; tie-breaker when dates match.
+    /// Bundled poetry sequence; tie-breaker when dates match.
     var sortCorpusIndex: Int?
-    /// 《毛泽东选集》式分卷/分期标题（来自 `AnthologyTOC.md`）；无 `##` 小节时与卷名相同。
+    /// Anthology subsection title from TOC.
     var anthologySectionTitle: String?
-    /// 卷级标题（`#` 行），书库一级分组用。
+    /// Anthology major volume title from TOC.
     var anthologyMajorTitle: String?
     var anthologyMajorOrder: Int?
     var anthologySubOrder: Int?
-    /// Optional user folder (library grouping); bundled 选集篇目通常留空。
+    /// Optional user library folder id.
     var libraryFolderId: UUID?
-    /// Cached for `displaySort` so sorting stays stable without the store (0 = 未分组，靠前).
+    /// Folder sort order cache for stable `displaySort`.
     var libraryFolderSortKey: Int
     let createdAt: Date
     var updatedAt: Date
@@ -138,7 +138,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         try c.encode(updatedAt, forKey: .updatedAt)
     }
 
-    /// Pager groups bundled anthology articles by volume/period from the TOC.
+    /// Horizontal pager grouping key for bundled anthology volumes.
     var anthologyScrollGroupKey: String {
         guard category == .anthology,
               let m = anthologyMajorOrder,
@@ -148,7 +148,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         return "bundledAnthology:\(m):\(s)"
     }
 
-    /// Text used for library search when full body is externalized (prefix + title still searched via `title` separately).
+    /// Text scanned for library search; title is searched separately.
     var textForLibrarySearch: String {
         if contentExternalized {
             return contentPreview ?? ""
@@ -162,14 +162,14 @@ struct DocumentItem: Identifiable, Codable, Hashable {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Built-in anthology (offline `.md`); matches `BundledAnthologyImporter.sourcePrefix`.
+    /// True for built-in anthology files (bundled source prefix).
     var isBundledAnthology: Bool {
         sourceFileName?.hasPrefix("bundledAnthology:") == true
     }
 
     var isLikelyMarkdown: Bool {
         if let name = sourceFileName?.lowercased(), name.hasSuffix(".md") { return true }
-        // Externalized bodies often have empty `content`; preview still reflects headings/lists for parsing + TTS.
+        // Externalized: prefer inline `content` when present; else use preview for markdown heuristics.
         let s: String
         if contentExternalized {
             if !content.isEmpty {
@@ -188,8 +188,7 @@ struct DocumentItem: Identifiable, Codable, Hashable {
         return false
     }
 
-    /// Fills missing sort fields for poetry loaded before date/index extraction existed.
-    /// Pass `resolvedBody` when `content` is empty because the body lives in an external file.
+    /// Fills missing poetry sort fields from body text; use resolvedBody when inline content is empty.
     mutating func backfillPoetrySortMetadataFromContentIfNeeded(resolvedBody: String? = nil) {
         guard category == .poetry else { return }
         var body = resolvedBody ?? content
