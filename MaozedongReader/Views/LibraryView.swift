@@ -860,5 +860,4 @@ struct LibraryFullSearchView: View {
         LibraryView(path: .constant(NavigationPath()))
     }
     .environmentObject(DocumentStore(previewMode: true))
-    .environmentObject(SpeechSessionController())
 }

@@ -7,7 +7,6 @@
 
 核心目标：
 - 阅读文本（诗词、语录、文章等）
-- 支持系统语音朗读
 - 支持字体大小、行距、背景主题调整
 - 支持导入本地文件（`txt` / `md`）
 
@@ -35,7 +34,6 @@
    - **目录**：有 `##`/`###` 等标题时才显示「目录」按钮；无标题则不弹空白说明
    - **全文搜索**（当前文档）
    - **阅读进度**：按当前可见段落自动保存（UTF-16 偏移），再次打开时恢复位置
-   - 一键朗读/停止朗读（`AVSpeechSynthesizer`）
    - **VoiceOver**：诗词正文每一行段落有独立 **无障碍标签**（朗读为纯文本，去掉 `**` 等标记）
    - **导出**：工具栏「导出」将当前篇生成为临时 `.md` 并通过系统分享表保存或分享
    - 阅读设置（字号、行距、主题、备份）
@@ -77,10 +75,7 @@ MaozedongReader/
     MarkdownBlockParser.swift
     InlineMarkdownFormatter.swift
     StableUUID.swift
-    SpeechSessionController.swift
-    IdleTimerController.swift
   Views/
-    ReaderPagerNotifications.swift
     LibraryView.swift
     ReaderView.swift
     AppTypography.swift

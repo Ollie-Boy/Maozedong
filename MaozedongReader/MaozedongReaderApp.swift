@@ -4,9 +4,7 @@ import UIKit
 @main
 struct MaozedongReaderApp: App {
     @StateObject private var store = DocumentStore()
-    @StateObject private var speechSession = SpeechSessionController()
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.scenePhase) private var scenePhase
     @State private var navPath = NavigationPath()
 
     init() {
@@ -26,24 +24,10 @@ struct MaozedongReaderApp: App {
                 LibraryView(path: $navPath)
             }
             .environmentObject(store)
-            .environmentObject(speechSession)
             .font(AppTypography.swiftUIFont(size: 17))
             .preferredColorScheme(store.readingPreferences.preferredColorSchemeResolved(environmentScheme: colorScheme))
             .onAppear {
-                IdleTimerController.setReadingRouteActive(!navPath.isEmpty)
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)
-            }
-            .onChange(of: navPath.count) { _, _ in
-                let inReader = !navPath.isEmpty
-                IdleTimerController.setReadingRouteActive(inReader)
-                if !inReader {
-                    speechSession.stop()
-                }
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    IdleTimerController.reapplyIdleTimerState()
-                }
             }
             .onChange(of: store.readingPreferences.theme) { _, _ in
                 AppAppearanceUIKit.syncGlobalChrome(preferences: store.readingPreferences, environmentScheme: colorScheme)

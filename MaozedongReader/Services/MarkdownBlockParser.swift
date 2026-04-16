@@ -167,10 +167,6 @@ enum MarkdownBlockParser {
         return out
     }
 
-    static func plainText(from blocks: [MarkdownBlock]) -> String {
-        blocks.flatMap { $0.plainTextLines() }.joined(separator: "\n")
-    }
-
     static func rangeOfBlock(_ block: MarkdownBlock, in source: String) -> Range<String.Index>? {
         let blocks = parse(source)
         guard let idx = blocks.firstIndex(where: { $0.id == block.id }) else { return nil }

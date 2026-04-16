@@ -1,5 +1,4 @@
 import SwiftUI
-import Foundation
 
 private struct ScrollContentMinYKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
@@ -24,7 +23,6 @@ private struct ViewportHeightKey: PreferenceKey {
 
 struct ReaderView: View {
     @EnvironmentObject private var store: DocumentStore
-    @EnvironmentObject private var speechSession: SpeechSessionController
 
     let document: DocumentItem
     /// When false (e.g. horizontal pager siblings), do not register nav items so only the active page owns the navigation bar.
@@ -100,19 +98,6 @@ struct ReaderView: View {
                             exportCurrentDocument()
                         } label: {
                             Label("导出", systemImage: "square.and.arrow.up")
-                        }
-
-                        Button {
-                            if speechSession.isSpeechSessionActive {
-                                speechSession.stop()
-                            } else {
-                                speechSession.speak(speechPlainText, sourceDocumentId: document.id)
-                            }
-                        } label: {
-                            Label(
-                                speechSession.isSpeechSessionActive ? "停止朗读" : "朗读",
-                                systemImage: speechSession.isSpeechSessionActive ? "stop.fill" : "speaker.wave.2.fill"
-                            )
                         }
 
                         Button {
@@ -205,15 +190,11 @@ struct ReaderView: View {
                 store.recordLastOpenedDocument(documentId: document.id)
             }
             loadBodyIfNeeded()
-            if presentsNavigationChrome {
-                restartSpeechForActivePageIfNeeded()
-            }
         }
         .onChange(of: presentsNavigationChrome) { _, chrome in
             if chrome {
                 loadBodyIfNeeded()
                 store.recordLastOpenedDocument(documentId: document.id)
-                restartSpeechForActivePageIfNeeded()
             } else {
                 progressSaveTask?.cancel()
                 let b = displayBlocks
@@ -234,15 +215,10 @@ struct ReaderView: View {
             } else {
                 prepareContent()
             }
-            restartSpeechForActivePageIfNeeded()
-        }
-        .onChange(of: loadedBody) { _, _ in
-            restartSpeechForActivePageIfNeeded()
         }
         .onChange(of: document.content) { _, _ in
             if !document.contentExternalized {
                 prepareContent()
-                restartSpeechForActivePageIfNeeded()
             }
         }
         .onDisappear {
@@ -251,12 +227,6 @@ struct ReaderView: View {
             blockFramesDebounceTask = nil
             let utf16 = currentProgressUTF16(blocks: blocks) ?? store.progressUTF16Offset(for: document.id) ?? 0
             store.setReadingProgress(documentId: document.id, utf16Offset: utf16)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .readerPagerActiveDocumentDidChange)) { note in
-            guard presentsNavigationChrome,
-                  let raw = note.userInfo?[ReaderPagerNotificationKeys.documentId] as? UUID,
-                  raw == document.id else { return }
-            restartSpeechForActivePageIfNeeded()
         }
     }
 
@@ -411,34 +381,6 @@ struct ReaderView: View {
             cachedBlocks = []
             plainSegments = PlainTextParagraphs.segments(from: readerSourceText)
         }
-    }
-
-    /// While 朗读 follow mode is on, switching the active pager page reads that page (poetry + anthology).
-    private func restartSpeechForActivePageIfNeeded() {
-        guard presentsNavigationChrome else { return }
-        guard speechSession.followActiveDocumentForTTS else { return }
-        let text = synthesizedSpeechPlainText().trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty {
-            if speechSession.speakingDocumentId != document.id {
-                speechSession.silencePlaybackPreservingFollow()
-            }
-            return
-        }
-        if speechSession.speakingDocumentId == document.id, speechSession.isSpeechSessionActive {
-            return
-        }
-        speechSession.speak(text, sourceDocumentId: document.id)
-    }
-
-    private func synthesizedSpeechPlainText() -> String {
-        if useMarkdown, !cachedBlocks.isEmpty {
-            return MarkdownBlockParser.plainText(from: cachedBlocks)
-        }
-        return plainSegments.map(\.text).joined(separator: "\n")
-    }
-
-    private var speechPlainText: String {
-        synthesizedSpeechPlainText()
     }
 
     @ViewBuilder
